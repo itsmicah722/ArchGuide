@@ -95,7 +95,7 @@ $ gdisk /dev/nvme0n1
 [gdisk]# <Enter>
 [gdisk]# <Enter>
 [gdisk]# <Enter>
-[gdisk]# 8300          
+[gdisk]# <Enter>        
 [gdisk]# w
 [gdisk]# y
 ```
@@ -104,13 +104,21 @@ $ gdisk /dev/nvme0n1
 - Uses default partition number
 - Uses the default start position for the partition
 - Uses the remaining free space we made in windows with the disk management tool
-- We give the partition the Hex `8300` which means *Linux Filesystem* for our `Btrfs` filesystem
-- We write the changes. 
+- Uses the default partition type of `8300` which means *Linux Filesystem* for our `Btrfs` filesystem
+- We write the changes.
+
+Run the command below to view the changes written. You should see a partition of filesystem type *ext4*. Take note of its label such as *nvme0n1p5* for example.
+
+```sh
+lsblk -f
+```
+
+**MAKE SURE YOU HAVE THE CORRECT PARTITION LABEL FOR THE COMMANDS BELOW!!!**
 
 Format the new partition as `Btrfs` - *better filsystem*:
 
 ```sh
-$ mkfs.btrfs -L ArchLinux /dev/nvme0n1p3
+$ mkfs.btrfs -L ArchLinux -f /dev/nvme0n1p5      # Replace nvme0n1p5 with your partition number
 ```
 
 ---
@@ -120,7 +128,7 @@ $ mkfs.btrfs -L ArchLinux /dev/nvme0n1p3
 Mount the new partition temporarily:
 
 ```sh
-$ mount /dev/nvme0n1p3 /mnt
+$ mount /dev/nvme0n1p5 /mnt
 ```
 
 Create subvolumes:
@@ -145,21 +153,22 @@ $ umount /mnt
 Now, mount the subvolumes with optimal options:
 
 ```sh
-$ mount -o subvol=@,compress=zstd,noatime,ssd /dev/nvme0n1p3 /mnt
-$ mkdir -p /mnt/{home,var,var/log,var/cache,tmp,.snapshots,swap,efi}
-$ mount -o subvol=@home /dev/nvme0n1p3 /mnt/home
-$ mount -o subvol=@var /dev/nvme0n1p3 /mnt/var
-$ mount -o subvol=@log /dev/nvme0n1p3 /mnt/var/log
-$ mount -o subvol=@cache /dev/nvme0n1p3 /mnt/var/cache
-$ mount -o subvol=@tmp /dev/nvme0n1p3 /mnt/tmp
-$ mount -o subvol=@snapshots /dev/nvme0n1p3 /mnt/.snapshots
-$ mount -o subvol=@swap /dev/nvme0n1p3 /mnt/swap
+mount -o subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt
+$ mkdir -p /mnt/{home,var,tmp,.snapshots,swap,efi}
+$ mount -o subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/home
+$ mount -o subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/var
+$ mkdir -p /mnt/var/{log,cache}
+$ mount -o subvol=@log,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/var/log
+$ mount -o subvol=@cache,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/var/cache
+$ mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/tmp
+$ mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/.snapshots
+$ mount -o subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2 /dev/nvme0n1p5 /mnt/swap
 ```
 
 Mount the Windows EFI partition:
 
 ```sh
-$ mount /dev/nvme0n1p1 /mnt/efi
+$ mount /dev/nvme0n1p1 /mnt/boot/efi
 ```
 
 ---
