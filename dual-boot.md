@@ -1,300 +1,273 @@
-# Arch Linux Install
-Personal guide for Arch Linux installation on hardware *(not virtual machines)*, including dual-boot with Windows 11.
+[![arch](https://cdn3.emoji.gg/emojis/4744_arch.png)](https://emoji.gg/emoji/4744_arch)
 
-## Font
+# Arch Linux Dual-Boot Install Guide
 
-Set a larger font:
-```
-$ setfont ter-132b
-```
+This guide provides a step-by-step walkthrough for installing Arch Linux on a **Btrfs filesystem** while dual-booting with **Windows 10/11**. It is designed to be beginner-friendly while also including best practices and optimizations for experienced users. This serves as a personal reference for future installations and is available for everyone.
 
-## Wi-Fi
+---
 
-If using Ethernet, skip this step.
+## 1. Prerequisites 
 
-Start `iwctl`:
-```
-$ iwctl
-```
+✅ Ensure your hardware is compatible with Arch Linux. See the [Arch Wiki Hardware Compatibility](https://wiki.archlinux.org/title/Category%3AHardware). Arch Linux runs on any x86_64 compatible machine with ~1GiB of RAM, so most modern systems are supported.
 
-Check your Wi-Fi device:
-```
-$ device list
-```
+✅ Verify that your system is in **UEFI Mode**, not legacy BIOS.
 
-Scan and list available networks:
-```
-$ station wlan0 scan
-$ station wlan0 get-networks
-```
+✅ Download the latest Arch Linux **ISO** from the official [Arch Linux website](https://archlinux.org/download/).
 
-Connect to Wi-Fi:
-```
-$ station wlan0 connect "<SSID>" password "<PASSWORD>"
-```
+✅ Use a tool like [Ventoy](https://ventoy.net/en/download.html) to create a bootable USB.
 
-Exit `iwctl`:
-```
-$ exit
-```
+✅ **Deallocate space for Arch Linux in Windows** via the `Disk Management` app.
 
-Confirm connection:
-```
-$ ip a
+✅ **Disable Fast Boot** in Windows: 
+   - Go to *Control Panel* > *Power Options* > *Choose What the Power Buttons Do* > *Change settings that are unavailable* 
+   - Disable *Turn on fast startup*.
+
+✅ **Disable Secure Boot** in your system's UEFI/BIOS settings.
+
+---
+
+## 2. Boot Into Arch Linux
+
+1. Reboot your PC and enter the *Boot Menu* and select your `USB device`.
+2. Choose the `Arch Linux ISO` from Ventoy.
+3. Select `Normal mode` in the Ventoy menu.
+4. When the Arch Linux menu appears, select `Arch Linux install medium (x86_64, UEFI)`.
+
+---
+
+## 3. Connecting to the Internet
+
+Check if your system already has an internet connection:
+> If using **Ethernet**, you should already be connected. 
+
+```sh
 $ ping -c 3 cloudflare.com
 ```
 
-## SSH
+Launch `iwctl` to connect to Wi-Fi:
 
-Enable SSH (already enabled by default):
-```
-$ systemctl enable sshd
+```sh
+$ iwctl
+[iwd]# station wlan0 scan
+[iwd]# station wlan0 get-networks
+[iwd]# station wlan0 connect <SSID>
+[iwd]# <PASSWORD>
+[iwd]# exit
 ```
 
-Set a password if using SSH:
-```
-$ passwd
+Verify connectivity:
+
+```sh
+$ ping -c 3 cloudflare.com
 ```
 
-## Partition Info
+---
 
-Check existing partitions:
-```
+# READ THIS WARNING :no_entry:
+
+- Change any `Disk Labels` in this guide such as *nvme0n1* or *nvme1n1* to the correct disk labels on **YOUR** computer as needed.
+
+- Change any `Partition Numbers` in this guide such as *nvme0n1**p2*** or *nvme1n1**p5*** to the correct partition numbers on **YOUR** disk as needed.
+
+- Do not delete the or format the `EFI partition` of type *FAT32* or *vfat*, which is of size *~100-500MiB*.
+
+- Do not delete or format any `Windows partitions` of type *NTFS*, which may vary in size.
+
+Should you not follow the above you **WILL** run into problems sooner or later. Carefully follow the guide to avoid this. 
+
+## 4. Disk Preparation
+
+### Identify Partitions
+
+List the current disk and partition layout for accurate information on your system. 
+
+```sh
 $ lsblk
 ```
 
-If Windows is installed, an EFI System Partition (ESP) already exists (usually `/dev/nvme0n1p1`). Reuse this partition instead of creating a new one.
+### Partition the Disk for Arch Linux
 
-Start `gdisk`:
-```
+Launch `gdisk` for modifying our *GPT* disk:
+
+```sh
 $ gdisk /dev/nvme0n1
+[gdisk]# n
+[gdisk]# <Enter>
+[gdisk]# <Enter>
+[gdisk]# <Enter>
+[gdisk]# 8300          
+[gdisk]# w
+[gdisk]# y
 ```
 
-Print the partition table:
-```
-Command: p
+- Creates a new partition
+- Uses default partition number
+- Uses the default start position for the partition
+- Uses the remaining free space we made in windows with the disk management tool
+- We give the partition the Hex `8300` which means *Linux Filesystem* for our `Btrfs` filesystem
+- We write the changes. 
+
+Format the new partition as `Btrfs` - *better filsystem*:
+
+```sh
+$ mkfs.btrfs -L ArchLinux /dev/nvme0n1p3
 ```
 
-## Create partitions:
+---
 
-#### EFI Partition `ef00` (Only if missing)
-This partition stores the bootloader and is required for UEFI systems. If you already have one from Windows, do not delete it. If not and one does not already exist, create a new one.
-```
-Command: n
-Partition number: Press Enter
-First sector: Press Enter
-Last sector: +512M
-Hex code: ef00 (EFI partition)
+## 5. Create and Mount Btrfs Subvolumes
+
+Mount the new partition temporarily:
+
+```sh
+$ mount /dev/nvme0n1p3 /mnt
 ```
 
-#### Swap Partition `8200` (Optional but recommended)
-Used when the system runs out of RAM. If you have 16GB of RAM, set this to 16GB (or slightly more if hibernation is required).
-```
-Command: n
-Partition number: Press Enter
-First sector: Press Enter
-Last sector: Match RAM size (e.g., +16G for 16GB RAM)
-Hex code: 8200 (Swap)
+Create subvolumes:
+
+```sh
+$ btrfs subvolume create /mnt/@
+$ btrfs subvolume create /mnt/@home
+$ btrfs subvolume create /mnt/@var
+$ btrfs subvolume create /mnt/@log
+$ btrfs subvolume create /mnt/@cache
+$ btrfs subvolume create /mnt/@tmp
+$ btrfs subvolume create /mnt/@snapshots
+$ btrfs subvolume create /mnt/@swap
 ```
 
-#### Root Partition `8309` (LUKS Encrypted)
-The main system partition where Arch Linux is installed. This will be encrypted for security.
-```
-Command: n
-Partition number: Press Enter
-First sector: Press Enter
-Last sector: +100G
-Hex code: 8309 (Linux LUKS root)
+Unmount the partition:
+
+```sh
+$ umount /mnt
 ```
 
-#### Home Partition `8309` (LUKS Encrypted)
-Stores your personal files, configurations, and user data. Keeping this separate makes future reinstalls easier.
-```
-Command: n
-Partition number: Press Enter
-First sector: Press Enter
-Last sector: Use remaining space or define a size
-Hex code: 8309 (Linux LUKS home)
+Now, mount the subvolumes with optimal options:
+
+```sh
+$ mount -o subvol=@,compress=zstd,noatime,ssd /dev/nvme0n1p3 /mnt
+$ mkdir -p /mnt/{home,var,var/log,var/cache,tmp,.snapshots,swap,efi}
+$ mount -o subvol=@home /dev/nvme0n1p3 /mnt/home
+$ mount -o subvol=@var /dev/nvme0n1p3 /mnt/var
+$ mount -o subvol=@log /dev/nvme0n1p3 /mnt/var/log
+$ mount -o subvol=@cache /dev/nvme0n1p3 /mnt/var/cache
+$ mount -o subvol=@tmp /dev/nvme0n1p3 /mnt/tmp
+$ mount -o subvol=@snapshots /dev/nvme0n1p3 /mnt/.snapshots
+$ mount -o subvol=@swap /dev/nvme0n1p3 /mnt/swap
 ```
 
-Write the changes:
-```
-Command: w
-Confirm: Y
+Mount the Windows EFI partition:
+
+```sh
+$ mount /dev/nvme0n1p1 /mnt/efi
 ```
 
-If using a second disk for `/home`:
-```
-$ gdisk /dev/nvme1n1
+---
+
+## 6. Install the Base System
+
+```sh
+$ pacstrap /mnt base linux linux-firmware btrfs-progs grub efibootmgr os-prober networkmanager
 ```
 
-```
-Command: n
-Partition number: 1
-First sector: Press Enter
-Last sector: Use entire disk
-Hex code: 8309 (Linux LUKS home)
+Generate the `fstab`:
+
+```sh
+$ genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
-Write the changes:
-```
-Command: w
-Confirm: Y
+Verify the fstab entries:
+
+```sh
+$ cat /mnt/etc/fstab
 ```
 
-## Encryption (LUKS)
+---
 
-Load encryption modules:
-```
-$ modprobe dm-crypt
-$ modprobe dm-mod
-```
-#### IMPORTANT NOTE
-**MAKE SURE** to change the `/dev/nvme0n1p2` partition labels to the correct ones on your disk. Otherwise these commands may not work and you will encrypt the wrong partitions. 
+## 7. Chroot and Configure the System
 
-List the partition labels:
-```
-$ lsblk
+```sh
+$ arch-chroot /mnt
 ```
 
-Encrypt root partition:
-```
-$ cryptsetup luksFormat -v -s 512 -h sha512 /dev/nvme0n1p2
+### Set Timezone
+
+```sh
+$ ln -sf /usr/share/zoneinfo/Region/City /etc/localtime
+$ hwclock --systohc
 ```
 
-Encrypt home partition:
-```
-$ cryptsetup luksFormat -v -s 512 -h sha512 /dev/nvme1n1p1
+### Configure Locale
+
+```sh
+$ echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+$ locale-gen
+$ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 ```
 
-Open encrypted partitions:
-```
-$ cryptsetup open /dev/nvme0n1p2 luks_root
-$ cryptsetup open /dev/nvme1n1p1 luks_home
+### Set Hostname
+
+```sh
+$ echo <HOSTNAME> > /etc/hostname
 ```
 
-## Volume Setup (LVM)
+---
 
-Once the encrypted partitions have been unlocked, LVM must be set up to manage the storage inside them. First, create a physical volume on the unlocked LUKS partition. This initializes it for use with LVM.
-```
-$ pvcreate /dev/mapper/luks_root
-```
+## 8. Install GRUB Bootloader
 
-Now, create a volume group to hold logical volumes. The name `arch` is used as an identifier for the group.
-```
-$ vgcreate arch /dev/mapper/luks_root
-```
-
-With the volume group created, logical volumes can now be created within it. These logical volumes will act as individual partitions inside the encrypted container. Create a swap volume sized according to your system's RAM.
-```
-$ lvcreate -n swap -L <RAM_SIZE>G arch
-```
-
-Next, create a root volume. This will store the operating system files. The `-l +60%FREE` option ensures that 60% of the remaining free space in the volume group is used.
-```
-$ lvcreate -n root -l +60%FREE arch
-```
-
-Finally, create a home volume to store user data. The remaining free space is allocated to it.
-```
-$ lvcreate -n home -l +100%FREE arch
-```
-
-Once these volumes are created, they will appear under `/dev/mapper/` as `arch-root`, `arch-home`, and `arch-swap`, and can now be formatted.
-
-## Filesystems
-
-Format partitions before mounting them.
-```
-$ mkswap /dev/mapper/arch-swap
-$ mkfs.btrfs -L root /dev/mapper/arch-root
-$ mkfs.btrfs -L home /dev/mapper/arch-home
-```
-
-Enable swap:
-```
-$ swapon /dev/mapper/arch-swap
-```
-
-## Mounting
-
-Mount root first:
-```
-$ mount /dev/mapper/arch-root /mnt
-```
-
-Create necessary directories:
-```
-$ mkdir -p /mnt/{home,boot}
-```
-
-Mount home:
-```
-$ mount /dev/mapper/arch-home /mnt/home
-```
-
-Mount boot:
-```
-$ mount /dev/nvme0n1p2 /mnt/boot
-```
-
-Create and mount EFI directory:
-```
-$ mkdir /mnt/boot/efi
-$ mount /dev/nvme0n1p1 /mnt/boot/efi
-```
-
-## Install Arch Linux
-```
-$ pacstrap -K /mnt base linux linux-firmware
-```
-
-## Encryption Hooks
-
-Edit mkinitcpio config:
-```
-$ nvim /etc/mkinitcpio.conf
-```
-
-Modify `HOOKS`:
-```
-HOOKS=(... block encrypt lvm2 filesystems fsck)
-```
-
-Regenerate initramfs:
-```
-$ mkinitcpio -p linux
-```
-
-## Bootloader Setup
-
-Install GRUB:
-```
-$ pacman -S grub efibootmgr
-$ grub-install --efi-directory=/boot/efi
-```
-
-Modify GRUB config:
-```
-$ nvim /etc/default/grub
-```
-
-Add kernel parameters:
-```
-root=/dev/mapper/arch-root cryptdevice=UUID=<uuid>:luks_root
-```
-
-Generate GRUB config:
-```
+```sh
+$ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=ArchLinux
+$ sed -i 's/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
 $ grub-mkconfig -o /boot/grub/grub.cfg
-$ grub-mkconfig -o /boot/efi/EFI/arch/grub.cfg
 ```
 
-## System Configuration (Time, Locale, Users, etc.)
+Enable NetworkManager:
 
-## Reboot
+```sh
+$ systemctl enable NetworkManager
 ```
-$ exit
+
+Set the root password:
+
+```sh
+$ passwd
+[passwd]# <PASSWORD>
+```
+
+Exit chroot:
+
+```sh
+exit
+```
+
+Unmount everything:
+
+```sh
 $ umount -R /mnt
-$ reboot now
 ```
+
+Reboot:
+
+```sh
+$ reboot
+```
+
+---
+
+## 9. Post-Installation Setup
+
+Create a **swap file**:
+
+```sh
+$ btrfs filesystem mkswapfile --size 4g --uuid clear /swap/swapfile
+$ swapon /swap/swapfile
+$ echo "/swap/swapfile none swap defaults 0 0" | tee -a /etc/fstab
+```
+
+Enable Btrfs snapshot integration:
+
+```sh
+$ systemctl enable grub-btrfsd.service
+```
+
+Your dual-boot Arch Linux setup with Btrfs is now complete! 🚀
