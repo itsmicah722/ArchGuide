@@ -1,5 +1,3 @@
-[![arch](https://cdn3.emoji.gg/emojis/4744_arch.png)](https://emoji.gg/emoji/4744_arch)
-
 # Pre-Installation Guide
 The pre-installation includes the setup prior to the dual boot and later intallation of arch linux along side your existing x64-bit Windows 10/11 OS.
 
@@ -53,7 +51,7 @@ The pre-installation includes the setup prior to the dual boot and later intalla
 
 2. Go to `choose what the power buttons do` > `Change settings that are currently unavailable`. ![Choose What Power Buttons Do](../../assets/dual_boot/pre_installation/choose_power_buttons_do.png)
 
-1. Disable the `Turn on fast startup` option. ![Disable Fast Startup](../../assets/disable_fast_startup.png)
+1. Disable the `Turn on fast startup` option. ![Disable Fast Startup](../../assets/dual_boot/pre_installation//disable_fast_startup.png)
 
 ---
 
@@ -101,7 +99,7 @@ The pre-installation includes the setup prior to the dual boot and later intalla
 
 2. Extract the downloaded zip file and run the `Ventoy2Disk.exe` executable.
 
-3. You'll see something like this: ![Ventoy](../../assets/dual_boot/pre_installation/ventoy.png)
+3. You'll see something like this: ![Ventoy](../../assets/dual_boot/pre_installation/ventoy_install.png)
 
 4. Under the `Device` dropdown menu, select your USB Drive, and then press `Install`.
 
@@ -115,6 +113,10 @@ The pre-installation includes the setup prior to the dual boot and later intalla
    
 3. Select `Boot in normal mode`.
 
-4. Choose `Arch Linux medium install (x86_64 standard UEFI)`: ![Arch Linux Install Medium](../../assets/dual_boot/pre_installation/arch_install_medium.jpg)
+4. Choose `Arch Linux install medium (x86_64, UEFI)`: ![Arch Linux Install Medium](../../assets/dual_boot/pre_installation/arch_install_medium.jpg)
 
-5. Congratulations!!! You have finally booted into Arch Linux!! 🎆 ![Arch Linux TTY](../../assets/dual_boot/pre_installation/arch_linux_tty.jpg)
+## Finally Done 🎉
+
+**Congratulations!!! You have finally booted into Arch Linux!!** 🎆 ![Arch Linux TTY](../../assets/dual_boot/pre_installation/arch_linux_tty.jpg)
+
+We are now ready to move on to the [Installation](installation.md) of Arch Linux alongside Windows. 
