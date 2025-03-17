@@ -1,5 +1,3 @@
-[![arch](https://cdn3.emoji.gg/emojis/4744_arch.png)](https://emoji.gg/emoji/4744_arch)
-
 # Arch Linux Dual-Boot Install Guide
 
 This guide provides a step-by-step walkthrough for installing Arch Linux on a **Btrfs filesystem** while dual-booting with **Windows 10/11**. It is designed to be beginner-friendly while also including best practices and optimizations for experienced users. This serves as a personal reference for future installations and is available for everyone.
