@@ -4,7 +4,7 @@ This guide provides a step-by-step walkthrough for installing Arch Linux on a **
 
 ---
 
-## 1. Prerequisites 
+## 1. Prerequisites
 
 ✅ Ensure your hardware is compatible with Arch Linux. See the [Arch Wiki Hardware Compatibility](https://wiki.archlinux.org/title/Category%3AHardware). Arch Linux runs on any x86_64 compatible machine with ~1GiB of RAM, so most modern systems are supported.
 
