@@ -1,5 +1,5 @@
 # Pre-Installation Guide
-The pre-installation includes the setup prior to the dual boot and later intallation of arch linux along side your existing x64-bit Windows 10/11 OS. Note that no prior knowledge is required for completing this guide, I assume you know very little/nothing about the subject. I'll walk you through step by step.  
+The pre-installation includes the setup prior to the dual boot and later installation of arch linux along side your existing x64-bit Windows 10/11 OS. Note that no prior knowledge is required for completing this guide, I assume you know very little/nothing about the subject. I'll walk you through step by step.  
 
 ---
 
@@ -83,7 +83,7 @@ Windows is currently using 100% of your drive, so we need to make room for our L
 
 2. Pick the `Partition` you would like to free up space in, typically a drive that you have plenty of space in. This could be the `C:\` or `G:\` Drive in this example: 
    
-   ![Disk Manager](../../assets/dual_boot/pre_installation/disk_manager.png) Note that you may see *Recovery Partitions* or other small system partitions - **avoid** rezising or deleting those. You only need to shrink the main Windows partition of choice. 
+   ![Disk Manager](../../assets/dual_boot/pre_installation/disk_manager.png) Note that you may see *Recovery Partitions* or other small system partitions - **avoid** resizing or deleting those. You only need to shrink the main Windows partition of choice. 
 
 3. Right click your chosen Partition and choose `Shrink Volume`. Now, free up however much space you think you will use in your arch linux installation. In this case, I will shrink **500GiB + 500MiB** of space - *This should be enough if you're new to linux.* The extra 500MiB is for the *EFI System Partition* as mentioned before. To calculate the MiB number equivalent to 500GiB + our 500MiB EFI partition, calculate *1024* * *500* + *500* = *512,500*.
    
@@ -112,7 +112,7 @@ The *ISO file* we will download for this is like a digital version of the Arch L
 
 ## Download Ventoy
 
-Ventoy is a cross-platform tool that turns your USB drive into a **bootable** drive — but instead of flashing just one ISO, it lets you drop in **multiple** ISOs and boot any of them without reformatting again. You could store as many Linux Distros or Windows versions that your USB Drive has room for.
+Ventoy is a cross-platform tool that turns your USB drive into a **bootable** drive — but instead of flashing just one ISO, it lets you drop in **multiple** ISOs and boot any of them without reformatting again. You could store as many Linux OS's or Windows versions that your USB Drive has room for.
 
 **IF YOU HAVE ANY IMPORTANT DATA ON THIS USB DRIVE BACK IT UP, IT WILL BE WIPED!!!**
 
