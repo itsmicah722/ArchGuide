@@ -1,3 +1,15 @@
+<p align="center">
+  <img src="../../assets/dual_boot/installation/test_svg.svg" width="120" height="100" alt="Arch Linux Logo">
+</p>
+
+<h3 align="center">Beginner-Friendly Arch Linux Install Guide</h3>
+
+<p align="center">
+  A clean, modular, and readable guide to installing Arch with Btrfs and dual-boot support.
+  <br>
+  <a href="#table-of-contents"><strong>Start the guide ↓</strong></a>
+</p>
+
 # Arch Linux Dual-Boot Install Guide
 
 The installing includes setting up the **Arch Linux Base System** along with configuring dual-boot with **Windows**. Like the previous *pre-installation* guide, this page is designed to be beginner friendly and every step will be explained thoroughly. 
@@ -319,13 +331,13 @@ Create the *Mount Points* (directories) for each subvolume so we can mount them 
 mkdir -p /mnt/{home,var,tmp,.snapshots,swap,efi}
 ```
 
-Mount subvolume **"@home"** to directory `mnt/home` for user data like documents and config files in: 
+Mount home subvolume **"@home"** to `mnt/home` for user data like documents and config files in: 
 
 ```rs
 mount -o subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/home
 ```
 
-Mount subvolume **"@var"** to directory `/mnt/var`, which holds package data, logs, and system state:
+Mount variable subvolume **"@var"** to `/mnt/var`, which holds package data, logs, and system state:
 
 ```rs
 mount -o subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var
@@ -338,25 +350,25 @@ Create subdirectories inside `mnt/var` for log files and cached data:
 mkdir -p /mnt/var/{log,cache}
 ```
 
-Mount subvolume **"@log"** to `/mnt/var/log` for system logs separately, making them easier to manage or exclude from snapshots:
+Mount log subvolume **"@log"** to `/mnt/var/log` for system logs separately, making them easier to manage or exclude from snapshots:
 
 ```rs
 mount -o subvol=@log,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/log
 ```
 
-Mounts subvolume **"@cache"** to directory `/mnt/var/cache`, used by pacman and other tools to store downloaded packages:
+Mounts cache subvolume **"@cache"** to `/mnt/var/cache`, used by pacman and other tools to store downloaded packages:
 
 ```rs
 mount -o subvol=@cache,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/cache
 ```
 
-Mount **"@tmp"** to directory `/mnt/tmp` for temporary files; it’s reset often and doesn’t need to be backed up:
+Mount temporaries subvolume **"@tmp"** to `/mnt/tmp` for temporary files; it’s reset often and doesn’t need to be backed up:
 
 ```rs
 mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
 ```
 
-Mount subvolume **"@snapshots"** to directory `/mnt/.snapshots`, where snapshot tools can store system restore points:
+Mount snapshots subvolume **"@snapshots"** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
 
 ```rs
 mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
@@ -373,7 +385,7 @@ If you **DO NOT** use Hibernation:
 
 [Hibernation](https://knowledgebase.frame.work/hibernation-on-linux-BkL1N5ffJg) requires enough swap to store the full RAM contents. If you're not using it, swap just acts as a backup when memory is tight. A [SWAP](https://wiki.archlinux.org/title/Swap) file is a space on your disk that acts like extra RAM when your physical memory (RAM) runs out. 
 
-Mount subvolume **"@swap"** to directory `/mnt/swap` with copy-on-write disabled (nodatacow) to safely hold a swapfile:
+Mount swap subvolume **"@swap"** to `/mnt/swap` with copy-on-write disabled (nodatacow) to safely hold a swapfile:
 
 ```rs
 mount -o subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/swap
@@ -381,7 +393,7 @@ mount -o subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX 
 
 ### Mount EFI System Partition
 
-The EFI System Partition (ESP) is where bootloaders live. We created it earlier and it should be formatted as *FAT32*, around *500 MiB* in size. Mount it to `/mnt/efi`:
+The [ESP](https://wiki.archlinux.org/title/EFI_system_partition) *(EFI System Partition)* is where bootloaders live. We created it earlier and it should be formatted as *FAT32*, around *500 MiB* in size. Mount it to `/mnt/efi`:
 
 ```rs
 mount /dev/nvmeXnXpX /mnt/efi
@@ -389,13 +401,13 @@ mount /dev/nvmeXnXpX /mnt/efi
 
 ## Setup Base Arch Linux System
 
-Install the base system along with essential tools and packages:
+[Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *chipsets*, *bootloaders*, etc. This forms the minimal working Arch system you'll later configure.
 
 ```rs
 pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nmcli nvim
 ```
 
-### Package Breakdown (Short Overview):
+### Package List:
 
 - **base:** Core Arch Linux system files.
 - **linux:** The Linux kernel.
@@ -409,80 +421,107 @@ pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-pro
 - **nmcli:** Command-line interface for NetworkManager.
 - **nvim:** Lightweight text editor (NeoVim).
 
-### Microcode (CPU-Specific Fixes)
+### Microcode (Optional but Recommended)
 
-Install one of the following depending on your CPU. These are considered [Microcode](https://wiki.archlinux.org/title/Microcode) packages are low-level CPU drivers loaded at boot to fix bugs or security issues.
+[Microcode](https://wiki.archlinux.org/title/Microcode) packages are *Low-Level Firmware* that update your CPU to fix bugs and patch security flaws. These updates are loaded early at boot, allowing Linux to apply critical fixes even if your BIOS isn’t updated. The primary manufacturers - **Intel** and **AMD** release them regularly to improve stability and performance. On Arch, install either `intel-ucode` or `amd-ucode` depending on your CPU.
 
-If you have an *Intel* CPU:  
+For **Intel** CPUs, install the `intel-ucode` microcode package:
 
 ```rs
-pacman -S intel-ucode
+pacstrap -S intel-ucode
 ```
 
-If you have an *AMD* CPU:  
+For **AMD** CPUs, install the `amd-ucode` microcode package:
 
 ```rs
-pacman -S amd-ucode
+pacstrap -S amd-ucode
 ```
 
 ### Generate Filesystem Table (fstab)
 
-This step scans your mounted partitions and writes them to `/etc/fstab` so that they’re mounted automatically on boot:
+The [Arch Filesystem Table](https://wiki.archlinux.org/title/Fstab) (`/etc/fstab`) is a config file that tells Linux which partitions, subvolumes, or drives to mount automatically at boot, where to mount them, and with what options. Each line in the file represents a storage device and its mount configuration. The `genfstab` command scans your currently mounted filesystems (like `/mnt`, `/mnt/home`, etc.) and generates the appropriate entries for fstab, using stable identifiers like *UUIDs* so mounts stay consistent even if device names change.
 
 ```rs
 genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
-> Note: The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/sda1`.
+> Note: The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/nvmeXnX`.
 
 ### Change Root into Your New System
 
-This replaces the current root environment with `/mnt`, so any commands you run from this point on will affect your new Arch Linux install — ***(NOT the live ISO system)***:
+In Linux, the ***"Root Environment"*** refers to the top-level filesystems the entire OS operates in. During installation, you're working from the arch install environment *Live Arch ISO*; so the root is still in a temporary location. To configure your newly installed system as if you had booted into it, you *Change Root* or [Chroot](https://wiki.archlinux.org/title/Chroot) this root location to the place you mounted your partitions. To do this, use `arch-chroot /mnt`, which will switch the root directory (`/`) to your new system at `/mnt`. This lets you run commands like setting the *timezone*, *locale*, *bootloader* etc. inside your new Arch setup. When you reboot, you will boot to this new *"root"* location every time.
 
 ```rs
 arch-chroot /mnt
 ```
 
-### Create the Swap File
+### Create the Swap File (Optional)
 
-This creates a swap file on your mounted @swap Btrfs subvolume. The chattr +C disables copy-on-write (required for swap to work on Btrfs):
+// TODO: Combine with the previous swap section
 
+This disables Btrfs's *copy-on-write* feature for the `/mnt/swap` directory. This is required for swap files to work correctly on Btrfs.
+
+```rs
 chattr +C /mnt/swap
+```
 
-dd if=/dev/zero of=/swap/swapfile bs=1M count=8192 status=progress  
-chmod 600 /swap/swapfile  
-mkswap /swap/swapfile  
+// FIXME: Make the size of swap decided by the user
+
+Creates an **8 GiB** swap file by filling it with zeroed data (1 MiB × 8192 blocks). The file will be located at `/swap/swapfile`.
+
+```rs
+dd if=/dev/zero of=/swap/swapfile bs=1M count=<SWAPFILE_SIZE> status=progress
+```
+
+Sets permissions so only the root user can read and write to the swapfile. This keeps it secure from other users.
+
+```rs
+chmod 600 /swap/swapfile
+```
+
+Formats the file to be used as swap space. It marks the file as usable memory overflow storage.
+
+```rs
+mkswap /swap/swapfile
+```
+
+Activates the swapfile so your system can start using it immediately. You’ll now have extra *“RAM”* available from disk.
+
+```rs
 swapon /swap/swapfile
+```
 
-This example creates an 8GiB swap file. Adjust the count= value if you want more or less swap.
+Adds the swapfile to `/etc/fstab` so it gets enabled automatically at every boot. This ensures your system always has swap available.
 
-Once done, don’t forget to add the swapfile to /etc/fstab so it gets used on boot:
-
+```rs
 echo '/swap/swapfile none swap defaults 0 0' >> /etc/fstab
+```
 
 ### Setup GRUB
 
-Install GRUB
+[​GRUB](https://wiki.archlinux.org/title/GRUB), *(GNU GRand Unified Bootloader)*, is a powerful boot manager widely used in Unix-like systems. It initializes hardware components and loads the operating system kernel during the boot process, allowing users to select from multiple installed operating systems or kernel configurations. This is useful for multi-boot setups like this guide, as it enables seamless switching between OS's; For instance, Windows 11 & Arch Linux.
+
+Install GRUB for UEFI systems, specifying the target architecture, EFI system partition, and assigning the bootloader identifier: `GRUB`:
 
 ```rs
 grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB
 ```
 
-Enable os-prober in GRUB: 
+[os-prober](https://wiki.archlinux.org/title/GRUB#Detecting_other_operating_systems) is a utility that detects other operating systems installed on your machine by scanning disk partitions. When integrated with GRUB, it allows the bootloader to include these detected systems in its boot menu, for selection at startup. In some distributions, os-prober is disabled by default. To enable it, you may need to set `GRUB_DISABLE_OS_PROBER=false` in your GRUB configuration. To enable it: 
 
 ```rs
 sed -i '/^GRUB_DISABLE_OS_PROBER=/d' /etc/default/grub
 echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
 ```
 
-Temporarily mount the windows ESP so os-prober can find it:
+Temporarily mount the Windows ESP so os-prober can find it:
 
 ```rs
 mkdir -p /mnt/windows_esp
 mount /dev/nvmeXnXpX /mnt/windows_esp
 ```
 
-Update GRUB config
+The *GRUB Configuration File*, typically located at `/boot/grub/grub.cfg`, is crucial for defining the bootloader's behavior, including available operating systems, default selection, and timeout settings. Properly configuring this file ensures that all desired operating systems are accessible from the GRUB menu, providing a smooth multi-boot experience. To make the configuration, use `grub-mkconfig`:
 
 ```rs
 grub-mkconfig -o /boot/grub/grub.cfg
@@ -502,7 +541,9 @@ Adding boot menu entry for UEFI Firmware Settings ...
 done
 ```
 
-Make sure you see the **Windows Boot Manager** line and the linux kernel files. 
+***MAKE SURE YOU SEE THE "WINDOWS BOOT MANAGER" AND LINUX FILES IN THE OUTPUT!***
+
+## Last Configuration Before Reboot
 
 Configure timezone: 
 
