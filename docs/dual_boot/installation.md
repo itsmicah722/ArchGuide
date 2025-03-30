@@ -1,18 +1,12 @@
-<p align="center">
-  <img src="../../assets/dual_boot/installation/test_svg.svg" width="120" height="100" alt="Arch Linux Logo">
-</p>
+<div align="center">
 
-<h3 align="center">Beginner-Friendly Arch Linux Install Guide</h3>
+<img src="../../assets/arch_linux_logo.svg" alt="Arch Linux Logo" width="200" height="200">
 
-<p align="center">
-  A clean, modular, and readable guide to installing Arch with Btrfs and dual-boot support.
-  <br>
-  <a href="#table-of-contents"><strong>Start the guide ↓</strong></a>
-</p>
+# Arch Linux & Win11 Dual-Boot Install Guide
 
-# Arch Linux Dual-Boot Install Guide
+In this guide, we’ll be working inside the **Live Arch Linux Installation Environment** to set up your partitions, install the base system, configure the bootloader, and handle essential user settings. Just like the *Pre-Installation* guide, this walkthrough is designed to be beginner-friendly, with each step clearly explained from start to finish.
 
-The installing includes setting up the **Arch Linux Base System** along with configuring dual-boot with **Windows**. Like the previous *pre-installation* guide, this page is designed to be beginner friendly and every step will be explained thoroughly. 
+</div>
 
 ---
 
@@ -24,20 +18,19 @@ The installing includes setting up the **Arch Linux Base System** along with con
 
 ## Connecting to the Internet
 
-The *Arch Linux Installation Environment* in this guide **WILL** require an internet connection in order to download the necessary base packages for the system. Currently I don't have a guide for how to install Arch Linux without an internet connection, but I may make one later.
+This guide **WILL** require an internet connection for downloading the essential base system packages and utils. Currently I don't have a guide for how to install Arch Linux without an internet connection. If you do not have an available network, go [here](https://wiki.archlinux.org/title/Offline_installation).
 
-### Ethernet
+### Connect to Ethernet
 
-Check if you already have an internet connection.
-> Note: If you are using **Ethernet**, you should already have internet.
+If you are using *Ethernet*, you should already have an internet connection. Ping a website to check:
 
 ```rs
 ping -c 3 cloudflare.com
 ```
 
-### Wi-Fi
+### Connect to Wi-Fi
 
-If not using Ethernet, launch the `iwctl` tool to connect to a wireless network:
+Launch the `iwctl` tool to connect to a wireless network:
 > Type `exit` if you ever want to abort the tool without applying changes.
 
 ```rs
@@ -62,7 +55,7 @@ ping -c 3 cloudflare.com
 
 ---
 
-# READ THIS WARNING ⛔
+## READ THIS WARNING ⛔
 
 Below we will begin *Partitioning* the disks manually. Arch Linux gives us the freedom to setup the OS from scratch to fit whatever your needs are. In this case we will be dealing with *Creating & Formatting* partitions on your hard disks to setup the base system. **Should you not follow the instructions below you WILL run into problems sooner or later. Be very careful in this part of the guide to avoid unrecoverable data loss!** 
 > Note: If you don't understand what these mean everything will be explained in the next section. 
@@ -160,10 +153,10 @@ Each filesystem serves a unique purpose in the OS. FAT32 & NTFS:
 
 ### Create Linux Filesystem Partition
 
-*UEFI* and *BIOS* are the two primary types of [Firmware Interfaces](https://www.geeksforgeeks.org/uefiunified-extensible-firmware-interface-and-how-is-it-different-from-bios/) that initialize hardware and boot your operating system. BIOS is the legacy standard seen in older hardware, while UEFI is its modern replacement seen in newer hardware. Different [Partitioning Styles](https://www.easeus.com/partition-master/mbr-vs-gpt.html#part1) work with different firmware interfaces. *MBR* (Master Boot Record) is the older standard used by older hard disks and works with BIOS. *GPT* (GUID Partition Table) is the modern replacement used by UEFI systems. 
+*UEFI* and *BIOS* are the two primary types of [Firmware Interfaces](https://www.geeksforgeeks.org/uefiunified-extensible-firmware-interface-and-how-is-it-different-from-bios/) that initialize hardware and boot your operating system. BIOS is the legacy standard seen in older hardware, while UEFI is its modern replacement seen in newer hardware. Different [Partitioning Schemes](https://wiki.archlinux.org/title/Partitioning#Partition_scheme) work with different firmware interfaces. *MBR* (Master Boot Record) is the older standard used by older hard disks and works with BIOS. *GPT* (GUID Partition Table) is the modern replacement used by UEFI systems. 
 
 The `fdisk` tool can be used to handle both MBR and GPT disks alike, so we will use that tool for partitioning:
-> Type `exit` if you ever want to abort the tool without applying changes.
+> Type `q` if you ever want to abort the tool without applying changes.
 
 ```rs
 fdisk /nvmeXnX
@@ -188,9 +181,9 @@ Next `fdisk` will ask you how much space you want to give this partition. Previo
 [fdisk]# +500G
 ```
 
-### Create EFI System Partition
+### Create EFI Partition
 
-Now we will create the **EFI partition** for storing GRUB files for booting Arch Linux. Like before, type `n` to create a new partition and press `Enter` to give it the default partition number. 
+Now we will create the [ESP](https://wiki.archlinux.org/title/EFI_system_partition) *(EFI System Partition)*, used for storing GRUB files for booting Arch Linux. Like before, type `n` to create a new partition and press `Enter` to give it the default partition number. 
 
 ```rs
 [fdisk]# n
@@ -374,26 +367,62 @@ Mount snapshots subvolume **"@snapshots"** to `/mnt/.snapshots`, where snapshot 
 mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
 ```
 
-### SWAP (Optional)
+### Setup SWAP (Optional)
 
-If you plan **DO** to use Hibernation:
+The [SWAP](https://wiki.archlinux.org/title/Swap) acts as *virtual memory* stored on your hard disk, providing additional space when your physical RAM is fully utilized. This is especially useful if your computer has limited RAM installed or when enabling power-saving [Hibernation](https://knowledgebase.frame.work/hibernation-on-linux-BkL1N5ffJg).
+
+If you **DO** plan to use Hibernation:
 - Swap size must be at least equal to your RAM (e.g. 16 GiB RAM → 16 GiB swap).
 
-If you **DO NOT** use Hibernation:
+If you **DO NOT** plan to use Hibernation:
 - 8–16 GiB RAM: Use 2–4 GiB swap.
 - 32 GiB or more: Use 1–2 GiB, or skip it entirely if you're sure.
 
-[Hibernation](https://knowledgebase.frame.work/hibernation-on-linux-BkL1N5ffJg) requires enough swap to store the full RAM contents. If you're not using it, swap just acts as a backup when memory is tight. A [SWAP](https://wiki.archlinux.org/title/Swap) file is a space on your disk that acts like extra RAM when your physical memory (RAM) runs out. 
-
-Mount swap subvolume **"@swap"** to `/mnt/swap` with copy-on-write disabled (nodatacow) to safely hold a swapfile:
+Mount swap subvolume ***"@swap"*** to `/mnt/swap` with copy-on-write disabled (nodatacow) to safely hold a swap file:
 
 ```rs
 mount -o subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/swap
 ```
 
+To create the swap file, allocate your desired size (e.g., `2G` -> 2GiB, etc):
+
+```rs
+fallocate -l <SWAP_SIZE> /mnt/swap/swapfile
+```
+
+Sets permissions so only the root user can read and write to the swapfile. This keeps it secure from other users.
+
+```rs
+chmod 600 /mnt/swap/swapfile
+```
+
+Disable Btrfs's *copy-on-write* feature for the `/mnt/swap` directory. This is required for swap files to work correctly on Btrfs.
+
+```rs
+chattr +C /mnt/swap/swapfile
+```
+
+Formats the file to be used as swap space. It marks the file as usable memory overflow storage.
+
+```rs
+mkswap /mnt/swap/swapfile
+```
+
+Activates the swapfile so your system can start using it immediately. You’ll now have extra *“RAM”* available from disk.
+
+```rs
+swapon /swap/swapfile
+```
+
+Ensure the swap file is activated: 
+
+```rs
+swapon --show
+```
+
 ### Mount EFI System Partition
 
-The [ESP](https://wiki.archlinux.org/title/EFI_system_partition) *(EFI System Partition)* is where bootloaders live. We created it earlier and it should be formatted as *FAT32*, around *500 MiB* in size. Mount it to `/mnt/efi`:
+The **ESP** *(EFI System Partition)* is where bootloaders live. We created it earlier and it should be formatted as *FAT32*, around *500 MiB* in size. Mount it to `/mnt/efi`:
 
 ```rs
 mount /dev/nvmeXnXpX /mnt/efi
@@ -404,7 +433,7 @@ mount /dev/nvmeXnXpX /mnt/efi
 [Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *chipsets*, *bootloaders*, etc. This forms the minimal working Arch system you'll later configure.
 
 ```rs
-pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nmcli nvim
+pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nmcli nano
 ```
 
 ### Package List:
@@ -419,7 +448,7 @@ pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-pro
 - **btrfs-progs:** Tools for working with the Btrfs filesystem.
 - **networkmanager:** Automatically manages network connections.
 - **nmcli:** Command-line interface for NetworkManager.
-- **nvim:** Lightweight text editor (NeoVim).
+- **nano:** Lightweight text editor.
 
 ### Microcode (Optional but Recommended)
 
@@ -445,6 +474,12 @@ The [Arch Filesystem Table](https://wiki.archlinux.org/title/Fstab) (`/etc/fstab
 genfstab -U /mnt >> /mnt/etc/fstab
 ```
 
+Append the swap file entry:
+
+```rs
+echo '/swap/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
+```
+
 > Note: The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/nvmeXnX`.
 
 ### Change Root into Your New System
@@ -453,48 +488,6 @@ In Linux, the ***"Root Environment"*** refers to the top-level filesystems the e
 
 ```rs
 arch-chroot /mnt
-```
-
-### Create the Swap File (Optional)
-
-// TODO: Combine with the previous swap section
-
-This disables Btrfs's *copy-on-write* feature for the `/mnt/swap` directory. This is required for swap files to work correctly on Btrfs.
-
-```rs
-chattr +C /mnt/swap
-```
-
-// FIXME: Make the size of swap decided by the user
-
-Creates an **8 GiB** swap file by filling it with zeroed data (1 MiB × 8192 blocks). The file will be located at `/swap/swapfile`.
-
-```rs
-dd if=/dev/zero of=/swap/swapfile bs=1M count=<SWAPFILE_SIZE> status=progress
-```
-
-Sets permissions so only the root user can read and write to the swapfile. This keeps it secure from other users.
-
-```rs
-chmod 600 /swap/swapfile
-```
-
-Formats the file to be used as swap space. It marks the file as usable memory overflow storage.
-
-```rs
-mkswap /swap/swapfile
-```
-
-Activates the swapfile so your system can start using it immediately. You’ll now have extra *“RAM”* available from disk.
-
-```rs
-swapon /swap/swapfile
-```
-
-Adds the swapfile to `/etc/fstab` so it gets enabled automatically at every boot. This ensures your system always has swap available.
-
-```rs
-echo '/swap/swapfile none swap defaults 0 0' >> /etc/fstab
 ```
 
 ### Setup GRUB
@@ -541,45 +534,159 @@ Adding boot menu entry for UEFI Firmware Settings ...
 done
 ```
 
-***MAKE SURE YOU SEE THE "WINDOWS BOOT MANAGER" AND LINUX FILES IN THE OUTPUT!***
-
 ## Last Configuration Before Reboot
 
-Configure timezone: 
+These last configurations set essential **System Settings** required for your Arch Linux system to function properly after rebooting. They ensure the correct system *timezone*, *locale* (language settings), *network connectivity*, *hostname*, and *user security* settings are configured.
+
+### Set the Timezone
+
+The [System Time](https://wiki.archlinux.org/title/System_time) controls the clock synced with your local region's timezone. To get a timezones list:
 
 ```rs
-ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+timedatectl list-timezones
+```
+
+Set the timezone. For example, United States Eastern time is: *"America/New_York"*
+
+```rs
+timedatectl set-timezone <Your/Timezone>
+```
+
+```rs
 hwclock --systohc
 ```
 
-Configure Locale: 
+### Configure Locale
+
+Your [Locale](https://wiki.archlinux.org/title/Locale) is the language of the region your in and is not set by default. 
+
+Open `/etc/locale.gen` with the *nano* text editor:
+> Note: In the Arch Linux TTY your mouse or touchpad won't work, use *Arrow Keys*. Press *Ctrl + O* to save changes, and *Ctrl + X* to exit nano.
 
 ```rs
-$ echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen
-$ locale-gen
-$ echo "LANG=en_US.UTF-8" > /etc/locale.conf
+nano /etc/locale.gen
 ```
 
-Set a HostName for your computer:
+In the file, uncomment the locales you wish to generate by removing the `#` at the beginning of the respective lines.
+
+For example, to enable *US English UTF-8*:
+
+```rs
+en_US.UTF-8 UTF-8
+```
+
+Similarly, for *British English UTF-8*:
+
+```rs
+en_GB.UTF-8 UTF-8
+```
+
+***UNCOMMENT THE LOCALE FOR YOUR REGION AS NEEDED***
+
+Generates the locale data based on your selections.
+
+```rs
+locale-gen
+```
+
+### Set Hostname
+
+The [Hostname](https://en.wikipedia.org/wiki/Hostname) is your computer's name on the network, which helps identify your machine on local networks.
 
 ```rs
 echo <HOSTNAME> > /etc/hostname
 ```
 
-Enable NetworkManager: 
+### Enable NetworkManager
+
+The [NetworkManager](https://wiki.archlinux.org/title/NetworkManager) package automatically manages your network connections, ensuring internet connectivity on reboot.
 
 ```rs
 systemctl enable NetworkManager
 ```
 
-Set root password: 
+### Set Root Password
+
+Establishes a password for the root user, **CRITICAL** for system security and for logging back in.
 
 ```rs
-# passwd
-[passwd]# <PASSWORD>
+passwd
+<PASSWORD>
 ```
 
-Exit chroot, unmount everything and reboot:
+### Create a Regular User
+
+Creating a regular (non-root) user for everyday use enhances security by reducing root privileges.
+
+```rs
+useradd -m -G wheel <USERNAME>
+passwd <USERNAME>
+```
+
+### Enable `sudo` for Regular User
+
+The [Sudo](https://wiki.archlinux.org/title/Sudo) package allows the regular user to perform administrative tasks securely when given permission.
+
+To set a user as `sudo`:
+
+```rs
+echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
+```
+
+### Check FSTAB
+
+The [fstab section](#generate-filesystem-table-fstab) from earlier will cover the generated filesystem table at `/etc/fstab`. Ensure the boot entries for partitions and subvolumes are correctly set to mount in the right places.
+
+```rs
+cat /etc/fstab
+```
+
+Should look something like this: 
+
+```rs
+# /etc/fstab: static file system information.
+# <file system>                         <mount point>  <type>   <options>                                                                                      <dump>  <pass>
+
+# Btrfs root subvolume
+# /etc/fstab: static file system information.
+# <file system>                                 <mount point>  <type>   <options>                                                                                      <dump>  <pass>
+
+# Btrfs root subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /             btrfs    subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                               0       0
+
+# Home subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /home         btrfs    subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                           0       0
+
+# Variable data subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /var          btrfs    subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
+
+# Log subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /var/log      btrfs    subvol=@log,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
+
+# Cache subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /var/cache    btrfs    subvol=@cache,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                          0       0
+
+# Temporary files subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /tmp          btrfs    subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
+
+# Snapshots subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /.snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
+
+# Swap subvolume
+UUID=550e8400-e29b-41d4-a716-446655440000       /swap         btrfs    subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2                                         0       0
+
+# EFI System Partition
+UUID=123e4567-e89b-12d3-a456-426614174000       /efi          vfat     umask=0077                                                                                     0       2
+```
+
+- **UUIDs:** The UUIDs will be different for you, this is normal. 
+- **Swap:** The swap subvolume may or may not exist for you, depending on if you chose to create one or not.
+
+**EVERYTHING ELSE IN THIS EXAMPLE OUTPUT SHOULD BE THE SAME FOR YOU, IF NOT YOU HAVE A PROBLEM!**
+
+### Reboot Commands
+
+Exit from chroot, disable swap file, unmount all mounted filesystems, and finally reboot the system.
 
 ```rs
 exit
@@ -589,3 +696,9 @@ reboot
 ```
 
 ---
+
+## Finally Done 🎉
+
+**Congratulations!!! You have finally booted into Arch Linux!!** 🎆
+
+We are now ready to move on to the [Post-Installation](post_installation.md) of Arch Linux alongside Windows. 
