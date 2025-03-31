@@ -18,7 +18,7 @@ In this guide, we’ll be working inside the **Live Arch Linux Installation Envi
 
 ## Connecting to the Internet
 
-This guide **WILL** require an internet connection for downloading the essential base system packages and utils. Currently I don't have a guide for how to install Arch Linux without an internet connection. If you do not have an available network, go [here](https://wiki.archlinux.org/title/Offline_installation).
+This guide **WILL** require an internet connection for downloading the essential base system packages and utils. Currently I don't have a guide for how to install Arch Linux without an internet connection. If you do not have an available network to connect to, go [here](https://wiki.archlinux.org/title/Offline_installation).
 
 ### Connect to Ethernet
 
@@ -30,20 +30,41 @@ ping -c 3 cloudflare.com
 
 ### Connect to Wi-Fi
 
-Launch the `iwctl` tool to connect to a wireless network:
-> Type `exit` if you ever want to abort the tool without applying changes.
+Launch the built-in [iwctl](https://wiki.archlinux.org/title/Iwd) tool to connect to a wireless network:
+> Type `exit` at any point if you want to abort the tool.
 
 ```rs
 iwctl
 ```
 
-Scan for networks, get their names, connect to one of them, enter the password, and exit. 
+List available *Wireless Interfaces* *(stations)*. Usually wireless stations are called: `wlan0`, `wlp2s0`, `wlan1`.
 
 ```rs
-station wlan0 scan
-station wlan0 get-networks
-station wlan0 connect <SSID>
-<PASSWORD>
+device list
+```
+
+Start a scan to find nearby networks:
+
+```rs
+station <STATION_NAME> scan
+```
+
+Show the list of networks:
+
+```rs
+station <STATION_NAME> get-networks
+```
+
+Connect to the SSID *(Wi-Fi Name)* of your network:
+> 🔐 You will be prompted to enter the *Wi-Fi Password*.
+
+```rs
+station <STATION_NAME> connect <SSID>
+```
+
+Exit the tool once you connected:
+
+```rs
 exit
 ```
 
@@ -57,25 +78,26 @@ ping -c 3 cloudflare.com
 
 ## READ THIS WARNING ⛔
 
-Below we will begin *Partitioning* the disks manually. Arch Linux gives us the freedom to setup the OS from scratch to fit whatever your needs are. In this case we will be dealing with *Creating & Formatting* partitions on your hard disks to setup the base system. **Should you not follow the instructions below you WILL run into problems sooner or later. Be very careful in this part of the guide to avoid unrecoverable data loss!** 
-> Note: If you don't understand what these mean everything will be explained in the next section. 
+The guide will walk you through every step. In this case we will be dealing with *Creating & Formatting* partitions and subvolumes on your hard disks to setup the base system. 
 
-- Change the **Disk Label** "*nvmeXnX*" in this guide with the correct disk label on **YOUR** computer such as `nvme0n1`.
+### SHOULD YOU NOT FOLLOW THE INSTRUCTIONS BELOW YOU (WILL) HAVE ISSUES! BE VERY CAREFUL IN THIS NEXT PART OF THE GUIDE TO AVOID UNRECOVERABLE DATA LOSS.
 
-- Change the **Partition Number** "nvmeXnXpX" in this guide with the correct partition number on **YOUR** disk such as `nvme0n1p2`.
+- **MAKE SURE YOU CHANGE:** the *Disk Label:* "*nvmeXnX*" in this guide with the correct disk label on **YOUR** computer such as `nvme0n1` or `sda`.
 
-- DO NOT delete the or format the **EFI System partition** of type "*FAT32*" or "*vfat*" of size *~100-500MiB*. Your computer will not boot if you delete this. 
+- **MAKE SURE YOU CHANGE:** the *Partition Number:* "*nvmeXnX(pX)*" in this guide with the correct partition number on **YOUR** disk such as `nvme0n1p2` or `sda2`.
 
-- DO NOT delete or format any **Windows partitions** of type "*NTFS*" varying in size. You will lose your personal data and operating system files on Windows.
+- **DO NOT:** delete the or format the *EFI partition* of type "*FAT32*" or "*vfat*" of size *~100-500MiB*. Your computer will not boot if you delete this. 
+
+- **DO NOT:** delete or format any *Windows partitions* of type "*NTFS*" varying in size. You will lose your personal data and operating system files on Windows.
 
 ## Disk Preparation
 
 ### Get Partition Layout
 
-​A *Hard Disk Drive* [(HDD)](https://www.geeksforgeeks.org/hard-disk-drive-hdd-secondary-memory/) is a device inside a computer that stores all your data, including the operating system/system(s), applications, and personal files. All computers have them and every computer has a unique *Disk Layout*. This includes different [Partitions](https://www.techtarget.com/searchstorage/definition/partition) which are sections of the HDD which is treated as a separate unit of the OS. On the other hand, [Volumes](https://en.wikipedia.org/wiki/Volume_(computing)) are storage areas for a single filesystem, typically stored inside partitions. The terms *Volume* and *Partition* are often used interchangeably but [Are Not](https://blog.purestorage.com/purely-educational/partition-vs-volume-whats-the-difference/) exactly the same. 
-> Note: The terms "Drive", "Hard Disk/HDD", "NVME SSD", and "SATA HDD", all mean the same thing for the purpose of this guide. All of them are simply physical devices you could hold in your hand located in the PC for data storage.
+​A *Hard Disk Drive* [(HDD)](https://en.wikipedia.org/wiki/Hard_disk_drive) is the device inside your computer which stores all your data; including the system files, applications, and personal data. All computers have them and each one contains a unique *Disk Layout*. The disk layout includes different [Partitions](https://simple.wikipedia.org/wiki/Disk_partition), which are sections of the HDD treated as a separate unit of the OS. On the other hand, [Volumes](https://en.wikipedia.org/wiki/Volume_(computing)) are storage areas for a single filesystem, typically stored within the partitions. The terms *Volume* and *Partition* are often used interchangeably but [Are Not](https://blog.purestorage.com/purely-educational/partition-vs-volume-whats-the-difference/) exactly the same. 
+> Note: For the sake of this guide, the terms "Drive", "Hard Disk/HDD", "NVME SSD", and "SATA HDD", all mean the same thing. All of them are simply physical data storage devices you could hold in your hand located in the PC.
 
-To get accurate information on how your particular computer's *Disk Layout* is structured, you'll need to run the `lsblk` command:
+To get your current *Disk Layout*, you'll need to run the `lsblk` command:
 
 ```rs
 lsblk
@@ -100,19 +122,19 @@ sda             8:0    0 931.5G  0 disk
 └─sda6          8:6    0 380.4G  0 part
 ```
 
-- The *nvme0n1* is a modern [NVME SSD](https://www.seagate.com/blog/what-is-an-nvme-ssd/) disk storing 476.9GiB of data on your computer. 
+- The *nvme0n1* label is an example of a [NVME SSD](https://en.wikipedia.org/wiki/Solid-state_drive) hard disk. Most modern PC's will have these. 
 
-- The *sda* is an old [SATA HDD](https://drivesaversdatarecovery.com/everything-you-need-to-know-about-sata-hard-drives/) disk storing 941.5GiB of data in your computer.
+- The *sda* label is an example of a legacy [SATA HDD](https://drivesaversdatarecovery.com/everything-you-need-to-know-about-sata-hard-drives/) hard disk. These are found in older computers.
 
-- The *nvme0n1"p1"* is a partition label telling us this is a partition inside the NVME disk.
+- The *nvme0n1"p1"* is a partition number telling us this is the first partition inside the NVME disk.
 
-- The *sda"1"* is also a partition label telling us this is a partition inside the SDA disk.
+- The *sda"3"* is also a partition number telling us this is the third partition inside the SDA disk.
 
-- At the top the *name*, *size*, and *type* categories are self explanatory, but the *mount-points* category will be discussed later. 
+- At the top, the *NAME*, *SIZE*, and *TYPE* categories are self explanatory, but the *mount-points* category will be covered later in the installation. 
 
 ### Get Filesystem Layout
 
-Every computer contains partitions on its disk/disk(s), and each of these partitions will contain [Filesystems](). A filesystem is a method used by operating systems to store, organize, and manage data on its hard drives. When a hard drive is divided into sections called partitions, each partition can be *Formatted* with a specific filesystem. 
+Every computer contains partitions on its disk/disk(s), and each of these partitions will contain [Filesystems](https://wiki.archlinux.org/title/File_systems). A *filesystem* is a method used by operating systems to store, organize, and manage data on its hard drives. When a hard drive is divided into partitions, each partition can be formatted with a specific filesystem. 
 
 To get accurate information on the Filesystem layout, run the `lsblk -f` command: 
 
@@ -125,96 +147,112 @@ This will output something similar to this:
 ```rs
 NAME        FSTYPE LABEL      UUID                                 MOUNTPOINTS
 nvme0n1
-├─nvme0n1p1 vfat   SYSTEM     A1B2-C3D4                            /boot/efi
+├─nvme0n1p1 vfat   SYSTEM     A1B2-C3D4                            /efi
 ├─nvme0n1p2
 ├─nvme0n1p3 ntfs   Windows    1234567890ABCDEF
 ├─nvme0n1p4 ntfs   Recovery   FEDCBA0987654321
-├─nvme0n1p5 ext4   ArchRoot   1122aabb-3344-cc55-dd66-778899aabbcc /
+└─nvme0n1p5 ext4   ArchRoot   1122aabb-3344-cc55-dd66-778899aabbcc /
 sda
 ├─sda1      vfat   ESP        B2C3-D4E5
 ├─sda2
 ├─sda3      ntfs   Data       23456789ABCDEF01
 ├─sda4      ntfs   WinRE      CDEF0123456789AB
-├─sda5      ext4   LinuxData  2233bbcc-4455-dd66-ee77-8899aabbccdd /mnt/data
-└─sda6
+└─sda5
 ```
 
-- The *FSTYPE* category tells us what type of filesystem the partition uses.
+- The **FSTYPE** category tells us what type of filesystem the partition uses.
 
-- The *LABEL* category tells us what that particular filesystem means to the OS.
+- The **LABEL** category tells us what that particular filesystem means to the OS.
 
-- The *UUID* or (Universally Unique Identifier) is the assigned label of each filesystem on a partition by the system. 
+- The **UUID** *(Universally Unique Identifier)* is the assigned label of each filesystem on a partition by the system. 
 
-Each filesystem serves a unique purpose in the OS. FAT32 & NTFS:
+Each filesystem serves a unique purpose in the OS. We'll cover them more in depth when we format the partitions.
 
-- [FAT32/vfat](https://en.wikipedia.org/wiki/File_Allocation_Table) (File Allocation Table 32): A filesystem compatible with both Windows and Linux aligning with the UEFI specification. You can have one EFI system partition formatted as FAT32 storing both Linux and Windows boot files. 
+- [FAT32/vfat](https://en.wikipedia.org/wiki/File_Allocation_Table): The *(File Allocation Table 32)* is an ancient filesystem developed in 1977 and is compatible with both Windows and Linux. FAT32 aligns with the *UEFI* specification. This means you can have one EFI system partition formatted as FAT32 storing both Linux and Windows boot files. 
 
-- [NTFS](https://en.wikipedia.org/wiki/NTFS) (New Technology File System): The primary filesystem for Windows. *(ext4 and btrfs are much better honestly)*
+- [NTFS](https://en.wikipedia.org/wiki/NTFS) (New Technology File System): Also an old filesystem which serves as the primary filesystem for Windows OS's, but does also work with Linux and macOS. *(Though other filesystems are preferred here in Linux)*
 
 ### Create Linux Filesystem Partition
 
-*UEFI* and *BIOS* are the two primary types of [Firmware Interfaces](https://www.geeksforgeeks.org/uefiunified-extensible-firmware-interface-and-how-is-it-different-from-bios/) that initialize hardware and boot your operating system. BIOS is the legacy standard seen in older hardware, while UEFI is its modern replacement seen in newer hardware. Different [Partitioning Schemes](https://wiki.archlinux.org/title/Partitioning#Partition_scheme) work with different firmware interfaces. *MBR* (Master Boot Record) is the older standard used by older hard disks and works with BIOS. *GPT* (GUID Partition Table) is the modern replacement used by UEFI systems. 
+[UEFI](https://en.wikipedia.org/wiki/UEFI) *(Unified Extensible Firmware Interface)* and [BIOS](https://en.wikipedia.org/wiki/BIOS) *(Basic Input/Output System)* are two primary types of firmware interfaces that your computer uses to initialize hardware and boot into your operating system. BIOS is an older, legacy standard typically found in earlier hardware. UEFI is the modern replacement, commonly used in newer hardware. Each firmware interface corresponds to a specific partitioning scheme; BIOS systems usually work with the older MBR *(Master Boot Record)* format, while UEFI systems utilize the modern GPT *(GUID Partition Table)* format.
 
-The `fdisk` tool can be used to handle both MBR and GPT disks alike, so we will use that tool for partitioning:
+Since you are using dual-booting Arch Linux with Windows 11, we will use the modern [gdisk](https://wiki.archlinux.org/title/GPT_fdisk) *(GPT fdisk)* tool instead of the legacy *fdisk*. Launch the `gdisk` tool:
 > Type `q` if you ever want to abort the tool without applying changes.
 
 ```rs
-fdisk /nvmeXnX
+gdisk /nvmeXnX
 ```
 
-Once inside fdisk, type `n` to create a new **Linux Filesystem** partition, and press `Enter` to give it the default partition number:
+Once inside gdisk, type `n` to create a new **Linux Filesystem** partition, and press `Enter` to give it the default partition number:
 
 ```rs
-[fdisk]# n
-[fdisk]# <ENTER>
+[gdisk]# n
+Press Enter for default
 ```
 
-Press `Enter` for the default first sector location for the partition on the hard drive:
+Press `Enter` for the default first sector available for the partition on the hard drive:
 
 ```rs
-[fdisk]# <ENTER>
+Press Enter for default
 ```
 
-Next `fdisk` will ask you how much space you want to give this partition. Previously in the *Pre-Installation* you freed up space on your windows volume + space for an extra EFI partition. In this case the guide said **500GiB** for the main partition:
+Next `gdisk` will ask you how much space you want to give this partition. Previously in the *Pre-Installation* you freed up space on your windows volume + space for an extra EFI partition. In this case the guide said **500GiB** for the main partition. *`+500G`*
 
 ```rs
-[fdisk]# +500G
+[gdisk]# +<SIZE>G
 ```
 
 ### Create EFI Partition
 
-Now we will create the [ESP](https://wiki.archlinux.org/title/EFI_system_partition) *(EFI System Partition)*, used for storing GRUB files for booting Arch Linux. Like before, type `n` to create a new partition and press `Enter` to give it the default partition number. 
+The [ESP](https://wiki.archlinux.org/title/EFI_system_partition) *(EFI System Partition)* is a special partition required by modern computers that use *UEFI Firmware* with [GPT](https://en.wikipedia.org/wiki/GUID_Partition_Table) partition tables. Older computers use *BIOS* with [MBR](https://en.wikipedia.org/wiki/Master_boot_record) partition tables. Since we're dual-booting Arch Linux with Windows 11, the system already has an ESP containing the [Windows Boot Manager](https://en.wikipedia.org/wiki/Windows_Boot_Manager). In this guide, we will create a second ESP dedicated to Linux Distributions. The 2 major reasons for this: 
+
+1. The Windows Boot Manager is located in the default *100MiB* ESP created by windows. This is not enough space for a second GRUB bootloader for linux.
+2. When Windows is updated or reinstalled, theres a high probability Windows will detect the foreign GRUB bootloader in it's same partition and delete it. This will completely prevent you from booting into Linux, which is not good. 
+
+After lots of research, its apparent that creating a separate EFI partition for bootloaders other than Windows Boot Manager is the best way to prevent the issues above.
+
+Like before, type `n` to create a new partition and press `Enter` to give it the default partition number. 
 
 ```rs
-[fdisk]# n
-[fdisk]# <ENTER>
+[gdisk]# n
+Press Enter for default
 ```
 
-Press `Enter` for the default first sector location for the partition on the hard drive:
+Press `Enter` for the default first sector available for the partition on the hard drive:
 
 ```rs
-[fdisk]# <ENTER>
+Press Enter for default
 ```
 
-Previously in the *Pre-Installation* you freed up space on windows for an extra EFI partition. In this case this guide we used **500MiB** for the EFI partition:
+Previously in the *Pre-Installation* you freed up 500MiB on Windows 11 for an extra EFI partition. Now we will use it:
 
 ```rs
-[fdisk]# +500M
+[gdisk]# +500M
 ```
 
-`fdisk` defaults to making new partitions of type *Linux Filesystem*, however this is an EFI partition. So we will type `t` to change the type, and enter the partition number it has. If you don't know what partition number the EFI partition we created is, type `p` to print the layout:
+Type `p` to print the partition table to get the partition number:
 
 ```rs
-[fdisk]# p
-[fdisk]# t
-[fdisk]# <PARTITION_NUMBER>
+[gdisk]# p
+```
+
+`gdisk` defaults to making new partitions of type *Linux Filesystem*, however this is an EFI partition. So we will type `t` to change the type, and enter the partition number it has. 
+
+```rs
+[gdisk]# t
+```
+
+Press `1` to make the partition of type *EFI Partition* with the *vfat/FAT32* filesystem. 
+
+```rs
+[gdisk]# 1
 ```
 
 Apply the changes to your disk:
 
 ```rs
-[fdisk]# w
-[fdisk]# y
+[gdisk]# w
+[gdisk]# y
 ```
 
 ### Format The Partitions
@@ -222,7 +260,7 @@ Apply the changes to your disk:
 Format the Linux Filesystem to use Btrfs:
 
 ```rs
-    mkfs.btrfs -L ArchLinux -f /dev/nvmeXnXpX
+mkfs.btrfs -L ArchLinux -f /dev/nvmeXnXpX
 ```
 
 Format the EFI partition to use FAT32:
@@ -233,11 +271,11 @@ mkfs.fat -F32 /dev/nvmeXnXpX
 
 ## Create Btrfs Subvolumes
 
-[Btrfs](https://btrfs.readthedocs.io/en/latest/Introduction.html) (Better File System) is a modern Linux filesystem with advanced features like copy-on-write, snapshots, and built-in support for [RAID](https://en.wikipedia.org/wiki/RAID) (multiple storage devices). One of its most useful features is [Subvolumes](https://btrfs.readthedocs.io/en/latest/Subvolumes.html), which are independent filesystems within a single Btrfs partition; each serving a different purpose. Subvolumes let you separate parts of your system, such as the system files, personal files, logs, temporary files, and more. This makes it MUCH easier to manage backups, rollbacks, and system organization without needing multiple partitions.
+[Btrfs](https://en.wikipedia.org/wiki/Btrfs) *(Better Filesystem)* is a modern filesystem with advanced features like copy-on-write, snapshots, and built-in support for [RAID](https://en.wikipedia.org/wiki/RAID) *(multiple storage devices as one)*. One of its most useful features is [Subvolumes](https://btrfs.readthedocs.io/en/latest/Subvolumes.html), which are independent filesystems within a single Btrfs partition; each serving a different purpose. Think of Subvolumes as partitions for partitions. You can separate your system files, personal files, logs, temporary files, into different Subvolumes. This makes it extremely easy to manage backups, rollbacks, system organization, or OS reinstallations without losing data or needing more partitions.
 
 ### Mount Root Temporarily
 
-In order to create the *Btrfs Subvolumes*, we first temporarily mount the **Root** partition to `/mnt` (common mount point). We mount here since the subvolumes will exist at the *(Root)* of the whole filesystem. 
+In order to create the **Btrfs Subvolumes**, we first temporarily mount the root partition to `/mnt` *(common mount point)*. We mount here since the subvolumes will exist at the *(Root)* of the whole filesystem. 
 
 ```rs
 mount /dev/nvmeXnXpX /mnt
@@ -247,50 +285,49 @@ mount /dev/nvmeXnXpX /mnt
 
 Next we create the Btrfs Subvolumes; each of which will be mounted in the coming section. 
 
-This is the root filesystem `/`. It will contain the core operating system: 
+The [Root](https://en.wikipedia.org/wiki/Root_directory) `/` directory is the top level of the Linux filesystem hierarchy. In Arch Linux, all partitions, subvolumes, and filesystems are mounted somewhere under "/", making them part of a single unified directory structure. The subvolume name is `@`:
 
 ```rs
 btrfs subvolume create /mnt/@
 ```
 
-Holds user's personal files, settings, downloads, and documents in `/home`:
+The [Home](https://en.wikipedia.org/wiki/Home_directory#Unix) `/home` directory contains the user's personal files such as settings, downloads, documents, configurations, etc. The subvolume name is `@home`:
 
 ```rs
 btrfs subvolume create /mnt/@home
 ```
 
-Contains variable data like system logs, caches, databases, and package info in `/var`:
+The [Variable](https://www.linfo.org/var.html) `/var` directory contains variable data like system logs, caches, databases, and package information. The subvolume name is `@var`:
 
 ```rs
 btrfs subvolume create /mnt/@var
 ```
 
-Used to isolate system logs `/var/log` from other parts of */var*:
+The [Logs](https://www.loggly.com/ultimate-guide/linux-logging-basics/) `var/logs` directory is used to isolate system debug output from other parts of */var*. The subvolume name is `@log`:
 
 ```rs
 btrfs subvolume create /mnt/@log
 ```
 
-Stores temporary downloaded package files (like pacman cache) in `/var/cache`:
-> Note: `pacman` is the package manager where you download and install most of your software in Arch Linux. 
+The [Cache](https://refspecs.linuxfoundation.org/FHS_3.0/fhs/ch05s05.html) `/var/cache` directory stores temporary downloaded package files (like pacman cache). The subvolume name is `@cache`:
 
 ```rs
 btrfs subvolume create /mnt/@cache
 ```
 
-Used for temporary files in `/tmp` that don’t need to be backed up:
+The [Temporaries](https://en.wikipedia.org/wiki/Temporary_folder) `/tmp` directory is used for deposable files that don’t need to be backed up. The subvolume name is `@tmp`:
 
 ```rs
 btrfs subvolume create /mnt/@tmp
 ```
 
-Holds snapshots taken by tools like Snapper or Btrfs Assistant in `/snapshots`:
+The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/.snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
 
 ```rs
 btrfs subvolume create /mnt/@snapshots
 ```
 
-Used for placing a swapfile in `/swap`, isolated to avoid copy-on-write issues:
+The [Swap](https://en.wikipedia.org/wiki/Memory_paging) `/swap` directory is used for storing the swapfile, isolated to avoid copy-on-write issues. The subvolume name is `@swap`:
 
 ```rs
 btrfs subvolume create /mnt/@swap
@@ -308,60 +345,59 @@ $ umount /mnt
 
 ## Mounting
 
-After creating our subvolumes, we need to *Mount* them so the Arch Linux installer knows where to put the system files. [Mounting](https://man.archlinux.org/man/mount.8) in Linux means attaching a storage location (like a disk, partition or subvolume) to a specific directory in the filesystem. Each subvolume gets mounted to its own location (e.g. `/mnt`, `/mnt/home`, `/mnt/var`, etc.). This allows us to control how each part of the system behaves — such as enabling *compression*, reducing disk writes with *noatime*, or disabling *copy-on-write*.
+After creating our subvolumes, we need to [Mount](https://en.wikipedia.org/wiki/Mount_(computing)) them in the locations we want them to be in when we boot. *Mounting* means attaching a storage location (e.g., a disk, partition or subvolume) to a specific directory. This makes the mounted files and directories available to the user via the subvolume's filesystem. Each subvolume gets mounted to its own mount point (e.g. `/mnt`, `/mnt/home`, `/mnt/var`, etc.). This allows us to control how each part of the system behaves. For instance we can enable *compression*, reduce disk writes with *noatime*, or disable *copy-on-write* for swap.
 
 ### Mount Btrfs Subvolumes
 
-Mount the root subvolume **"@"** to `/mnt` with compression, SSD optimizations, and reduced write frequency.
+Mount the root subvolume ***"@"*** to `/mnt` with compression, SSD optimizations, and reduced write frequency.
 
 ```rs
 mount -o subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt
 ```
 
-Create the *Mount Points* (directories) for each subvolume so we can mount them next:
+Create the *Mount Points* (directories) for each subvolume so we can mount them there:
 
 ```rs
 mkdir -p /mnt/{home,var,tmp,.snapshots,swap,efi}
 ```
 
-Mount home subvolume **"@home"** to `mnt/home` for user data like documents and config files in: 
+Mount home subvolume ***"@home"*** to `mnt/home` for user data like documents and config files in: 
 
 ```rs
 mount -o subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/home
 ```
 
-Mount variable subvolume **"@var"** to `/mnt/var`, which holds package data, logs, and system state:
+Mount variable subvolume ***"@var"*** to `/mnt/var`, which holds package data, logs, and system state:
 
 ```rs
 mount -o subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var
 ```
 
 Create subdirectories inside `mnt/var` for log files and cached data:
-> ⚠️ This is done **AFTER** mounting **"@var"** to `/var` because if not the mount will overwrite any existing subdirectories we create.  
 
 ```rs
 mkdir -p /mnt/var/{log,cache}
 ```
 
-Mount log subvolume **"@log"** to `/mnt/var/log` for system logs separately, making them easier to manage or exclude from snapshots:
+Mount log subvolume ***"@log"*** to `/mnt/var/log` for system logs separately, making them easier to manage or exclude from snapshots:
 
 ```rs
 mount -o subvol=@log,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/log
 ```
 
-Mounts cache subvolume **"@cache"** to `/mnt/var/cache`, used by pacman and other tools to store downloaded packages:
+Mounts cache subvolume ***"@cache"*** to `/mnt/var/cache`, used by pacman and other tools to store downloaded packages:
 
 ```rs
 mount -o subvol=@cache,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/cache
 ```
 
-Mount temporaries subvolume **"@tmp"** to `/mnt/tmp` for temporary files; it’s reset often and doesn’t need to be backed up:
+Mount temporaries subvolume ***"@tmp"*** to `/mnt/tmp` for temporary files; it’s reset often and doesn’t need to be backed up:
 
 ```rs
 mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
 ```
 
-Mount snapshots subvolume **"@snapshots"** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
+Mount snapshots subvolume ***"@snapshots"*** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
 
 ```rs
 mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
