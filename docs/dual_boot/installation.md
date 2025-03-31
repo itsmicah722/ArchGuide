@@ -180,7 +180,7 @@ Since you are using dual-booting Arch Linux with Windows 11, we will use the mod
 > Type `q` if you ever want to abort the tool without applying changes.
 
 ```rs
-gdisk /nvmeXnX
+gdisk /dev/nvmeXnX
 ```
 
 Once inside gdisk, type `n` to create a new **Linux Filesystem** partition, and press `Enter` to give it the default partition number:
@@ -200,6 +200,12 @@ Next `gdisk` will ask you how much space you want to give this partition. Previo
 
 ```rs
 [gdisk]# +<SIZE>G
+```
+
+Finally, specify the type you want the partition to be with a `GUID/Hex` code. Press `Enter` to use the default option of *Linux Filesystem*. 
+
+```rs
+Press Enter for default
 ```
 
 ### Create EFI Partition
@@ -230,25 +236,13 @@ Previously in the *Pre-Installation* you freed up 500MiB on Windows 11 for an ex
 [gdisk]# +500M
 ```
 
-Type `p` to print the partition table to get the partition number:
+Use the `ef00` code to make the created partition an ESP:
 
 ```rs
-[gdisk]# p
+[gdisk]# ef00
 ```
 
-`gdisk` defaults to making new partitions of type *Linux Filesystem*, however this is an EFI partition. So we will type `t` to change the type, and enter the partition number it has. 
-
-```rs
-[gdisk]# t
-```
-
-Press `1` to make the partition of type *EFI Partition* with the *vfat/FAT32* filesystem. 
-
-```rs
-[gdisk]# 1
-```
-
-Apply the changes to your disk:
+Write the changes to your disk:
 
 ```rs
 [gdisk]# w
@@ -338,7 +332,7 @@ btrfs subvolume create /mnt/@swap
 Once the subvolumes are created, unmount the root partition so we can remount each subvolume individually later with proper options:
 
 ```rs
-$ umount /mnt
+umount -Rlf /mnt
 ```
 
 ---
@@ -420,22 +414,32 @@ Mount swap subvolume ***"@swap"*** to `/mnt/swap` with copy-on-write disabled (n
 mount -o subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/swap
 ```
 
-To create the swap file, allocate your desired size (e.g., `2G` -> 2GiB, etc):
+Disable Btrfs's *copy-on-write* feature for the `/mnt/swap` directory. This is required for swap files to work correctly on Btrfs.
 
 ```rs
-fallocate -l <SWAP_SIZE> /mnt/swap/swapfile
+chattr +C /mnt/swap
+```
+
+| Swap Size | dd Count Value (MB) | Explanation         |
+|-----------|---------------------|---------------------|
+| 1 GiB     | 1024                | 1 GiB = 1024 MB     |
+| 2 GiB     | 2048                | 2 × 1024 = 2048 MB  |
+| 4 GiB     | 4096                | 4 × 1024 = 4096 MB  |
+| 8 GiB     | 8192                | 8 × 1024 = 8192 MB  |
+| 16 GiB    | 16384               | 16 × 1024 = 16384 MB|
+| 32 GiB    | 32768               | 32 × 1024 = 32768 MB|
+| 64 GiB    | 65536               | 64 × 1024 = 65536 MB|
+
+To create the swap file, use the chart above to calculate the `SIZE` you want to allocate for the file. Put that number in the `dd` command below:
+
+```rs
+dd if=/dev/zero of=/mnt/swap/swapfile bs=1M count=<SIZE> status=progress
 ```
 
 Sets permissions so only the root user can read and write to the swapfile. This keeps it secure from other users.
 
 ```rs
 chmod 600 /mnt/swap/swapfile
-```
-
-Disable Btrfs's *copy-on-write* feature for the `/mnt/swap` directory. This is required for swap files to work correctly on Btrfs.
-
-```rs
-chattr +C /mnt/swap/swapfile
 ```
 
 Formats the file to be used as swap space. It marks the file as usable memory overflow storage.
@@ -447,7 +451,7 @@ mkswap /mnt/swap/swapfile
 Activates the swapfile so your system can start using it immediately. You’ll now have extra *“RAM”* available from disk.
 
 ```rs
-swapon /swap/swapfile
+swapon /mnt/swap/swapfile
 ```
 
 Ensure the swap file is activated: 
@@ -469,7 +473,7 @@ mount /dev/nvmeXnXpX /mnt/efi
 [Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *chipsets*, *bootloaders*, etc. This forms the minimal working Arch system you'll later configure.
 
 ```rs
-pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nmcli nano
+pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nano
 ```
 
 ### Package List:
@@ -483,8 +487,7 @@ pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-pro
 - **os-prober:** Detects Windows or other OSes during bootloader setup.
 - **btrfs-progs:** Tools for working with the Btrfs filesystem.
 - **networkmanager:** Automatically manages network connections.
-- **nmcli:** Command-line interface for NetworkManager.
-- **nano:** Lightweight text editor.
+- **nano:** Lightweight user-friendly text editor.
 
 ### Microcode (Optional but Recommended)
 
@@ -493,18 +496,18 @@ pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-pro
 For **Intel** CPUs, install the `intel-ucode` microcode package:
 
 ```rs
-pacstrap -S intel-ucode
+pacstrap /mnt intel-ucode
 ```
 
 For **AMD** CPUs, install the `amd-ucode` microcode package:
 
 ```rs
-pacstrap -S amd-ucode
+pacstrap /mnt amd-ucode
 ```
 
 ### Generate Filesystem Table (fstab)
 
-The [Arch Filesystem Table](https://wiki.archlinux.org/title/Fstab) (`/etc/fstab`) is a config file that tells Linux which partitions, subvolumes, or drives to mount automatically at boot, where to mount them, and with what options. Each line in the file represents a storage device and its mount configuration. The `genfstab` command scans your currently mounted filesystems (like `/mnt`, `/mnt/home`, etc.) and generates the appropriate entries for fstab, using stable identifiers like *UUIDs* so mounts stay consistent even if device names change.
+[fstab](https://wiki.archlinux.org/title/Fstab) *(Filesystem Table)* located in `/etc/fstab` is a config file that tells Linux which partitions, subvolumes, or drives to mount automatically at boot, where to mount them, and with what options. Each line in the file represents a storage device and its mount configuration. The `genfstab` command scans your currently mounted filesystems (like `/mnt`, `/mnt/home`, etc.) and generates the appropriate entries for fstab, using stable identifiers like *UUIDs* so mounts stay consistent even if device names change.
 
 ```rs
 genfstab -U /mnt >> /mnt/etc/fstab
@@ -647,7 +650,7 @@ Establishes a password for the root user, **CRITICAL** for system security and f
 
 ```rs
 passwd
-<PASSWORD>
+> 🔐 You will be prompted to enter your new *Root Password*.
 ```
 
 ### Create a Regular User
@@ -656,7 +659,13 @@ Creating a regular (non-root) user for everyday use enhances security by reducin
 
 ```rs
 useradd -m -G wheel <USERNAME>
+```
+
+Set a password for this new user:
+
+```rs
 passwd <USERNAME>
+> 🔐 You will be prompted to enter your new *User Password*.
 ```
 
 ### Enable `sudo` for Regular User
@@ -722,12 +731,27 @@ UUID=123e4567-e89b-12d3-a456-426614174000       /efi          vfat     umask=007
 
 ### Reboot Commands
 
-Exit from chroot, disable swap file, unmount all mounted filesystems, and finally reboot the system.
+Exit from chroot back into the arch install environment:
 
 ```rs
 exit
+```
+
+Disable the swap file:
+
+```rs
 swapoff /mnt/swap/swapfile
-umount -R /mnt
+```
+
+Force all filesystems to unmount: 
+
+```rs
+umount -Rlf /mnt
+```
+
+Reboot the system, you will be greeted with the GRUB menu. If you did everything right, windows 11 and arch linux will appear in the boot options. 
+
+```rs
 reboot
 ```
 
