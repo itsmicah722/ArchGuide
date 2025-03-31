@@ -4,7 +4,7 @@
 
 # Arch Linux & Win11 Dual-Boot Install Guide
 
-In this guide, we’ll be working inside the **Live Arch Linux Installation Environment** to set up your partitions, install the base system, configure the bootloader, and handle essential user settings. Just like the *Pre-Installation* guide, this walkthrough is designed to be beginner-friendly, with each step clearly explained from start to finish.
+In this guide, we’ll be working from within the **Live Arch Linux Installation Environment** to set up your partitions, install the base system, configure the bootloader, and handle essential user settings. Just like the *Pre-Installation* guide, this walkthrough is designed to be beginner-friendly, with each step clearly explained from start to finish.
 
 </div>
 
@@ -468,44 +468,168 @@ The **ESP** *(EFI System Partition)* is where bootloaders live. We created it ea
 mount /dev/nvmeXnXpX /mnt/efi
 ```
 
-## Setup Base Arch Linux System
+## Base Arch Linux System
 
-[Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *chipsets*, *bootloaders*, etc. This forms the minimal working Arch system you'll later configure.
+[Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *microcode*, *bootloaders*, *development utilities*, etc. This forms the minimal working Arch system you'll boot into.
 
 ```rs
-pacstrap /mnt base linux linux-firmware sudo grub efibootmgr os-prober btrfs-progs networkmanager nano
+pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efibootmgr grub-btrfs inotify-tools timeshift nvim networkmanager pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector zsh zsh-completions zsh-autosuggestions openssh man sudo
 ```
 
-### Package List:
+### 📦 General Arch Linux Packages
 
-- **base:** Core Arch Linux system files.
-- **linux:** The Linux kernel.
-- **linux-firmware:** Firmware for CPUs, Wi-Fi, GPUs, etc.
-- **sudo:** Lets users run commands as root.
-- **grub:** The GRUB bootloader.
-- **efibootmgr:** Manages UEFI boot entries.
-- **os-prober:** Detects Windows or other OSes during bootloader setup.
-- **btrfs-progs:** Tools for working with the Btrfs filesystem.
-- **networkmanager:** Automatically manages network connections.
-- **nano:** Lightweight user-friendly text editor.
+- **base**  
+  The essential package group required to boot and operate Arch Linux. It includes the core userland utilities like `bash`, `coreutils`, `file`, `fsck`, etc.
 
-### Microcode (Optional but Recommended)
+- **linux**  
+  The Arch Linux default kernel. This is the core of your operating system that manages hardware and system processes.
 
-[Microcode](https://wiki.archlinux.org/title/Microcode) packages are *Low-Level Firmware* that update your CPU to fix bugs and patch security flaws. These updates are loaded early at boot, allowing Linux to apply critical fixes even if your BIOS isn’t updated. The primary manufacturers - **Intel** and **AMD** release them regularly to improve stability and performance. On Arch, install either `intel-ucode` or `amd-ucode` depending on your CPU.
+- **linux-firmware**  
+  Contains firmware for various devices (CPUs, GPUs, Wi-Fi, Bluetooth, etc.). Necessary for full hardware support.
 
-For **Intel** CPUs, install the `intel-ucode` microcode package:
+- **base-devel**  
+  A group of development tools like `gcc`, `make`, `pkgconf`, and others. Required for compiling software and using the **AUR** *(Arch User Repository)*.
+
+- **git**  
+  A version control system. Essential for downloading dotfiles, cloning repos, and interacting with the AUR.
+
+- **sudo**  
+  Allows regular users to run commands as root by prefixing them with `sudo`. Important for secure system administration.
+
+- **btrfs-progs**  
+  Tools for managing Btrfs filesystems. Includes utilities like `mkfs.btrfs`, `btrfs balance`, and snapshotting tools.
+
+- **grub**  
+  The GRUB bootloader lets you choose between multiple operating systems or kernels at boot.
+
+- **efibootmgr**  
+  A tool to manage UEFI boot entries. Needed when installing GRUB on systems using UEFI.
+
+- **grub-btrfs**  
+  A script that integrates Btrfs snapshots with GRUB so you can boot into Timeshift snapshots directly from the GRUB menu.
+
+- **inotify-tools**  
+  Provides command-line programs to monitor filesystem events. Used by grub-btrfs to watch for snapshot changes.
+
+- **timeshift**  
+  A system restore utility using Btrfs or rsync. Great for taking system snapshots before upgrades or risky changes.
+
+- **nvim**  
+  Neovim – a modern, lightweight, and extensible fork of Vim. Powerful for editing config files or code.
+
+- **networkmanager**  
+  Manages network connections automatically. Great for desktops/laptops—works with both Wi-Fi and Ethernet.
+
+- **pipewire**  
+  A modern audio and video server for Linux. Replaces PulseAudio and JACK with better performance and compatibility.
+
+- **pipewire-alsa**  
+  ALSA plugin to route audio through PipeWire, enabling compatibility with ALSA-based applications.
+
+- **pipewire-pulse**  
+  PulseAudio compatibility layer for PipeWire. Allows apps expecting PulseAudio to work seamlessly with PipeWire.
+
+- **pipewire-jack**  
+  JACK compatibility layer for PipeWire. Lets professional audio applications that use JACK work with PipeWire.
+
+- **wireplumber**  
+  A session manager for PipeWire that handles audio/video routing and device policy. Required for PipeWire to function fully.
+
+- **reflector**  
+  Automatically fetches the latest and fastest Arch mirror list based on location and speed. Useful for speeding up package downloads.
+
+- **zsh**  
+  Z Shell – an interactive and customizable shell. A popular alternative to Bash with advanced scripting and usability features.
+
+- **zsh-completions**  
+  Additional completion definitions for Zsh. Improves the shell experience by auto-completing commands more effectively.
+
+- **zsh-autosuggestions**  
+  Suggests commands as you type based on history and context. Super helpful and improves shell efficiency.
+
+- **openssh**  
+  Provides the `ssh` command and SSH server/client tools. Useful for remote access, Git over SSH, etc.
+
+- **man**  
+  The manual page system. `man <command>` gives you documentation for commands and tools on your system.
+
+- **os-prober**  
+  Detects other installed operating systems (like Windows) during GRUB installation. Essential for dual-boot setups.
+
+
+### Microcode Firmware
+
+[Microcode](https://wiki.archlinux.org/title/Microcode) is low-level firmware for your **CPU** that addresses **security vulnerabilities**, **stability issues**, and **performance bugs**. These updates are loaded **early during boot**, allowing Linux to apply critical fixes **even if your motherboard BIOS isn’t up to date**.
+
+On Arch Linux, simply install the appropriate microcode package based on your CPU manufacturer:
+
+For Intel CPUs:
 
 ```rs
 pacstrap /mnt intel-ucode
 ```
 
-For **AMD** CPUs, install the `amd-ucode` microcode package:
+For AMD CPUs:
 
 ```rs
 pacstrap /mnt amd-ucode
 ```
 
-### Generate Filesystem Table (fstab)
+> These packages will generate an additional boot initrd (like `intel-ucode.img`) that gets loaded before the Linux kernel by your bootloader (e.g., GRUB).
+
+---
+
+### Video Drivers
+
+Your **GPU (Graphics Processing Unit)** needs dedicated drivers for 2D/3D acceleration, Vulkan support, and hardware video decoding. Arch Linux provides vendor-supported drivers for **AMD**, **NVIDIA**, and **Intel** graphics chips — you can install them **during pacstrap** or after rebooting into your new system.
+
+For AMD GPUs:
+
+```rs
+pacstrap /mnt mesa mesa-vdpau vulkan-radeon libva-mesa-driver
+```
+
+- `mesa`: Core open-source 3D graphics library
+- `mesa-vdpau`: Enables hardware video decoding (VDPAU)
+- `vulkan-radeon`: Vulkan driver for AMD GPUs (RADV)
+- `libva-mesa-driver`: VA-API support for video acceleration
+
+> ✅ AMD cards are **very well-supported** on Linux with open-source drivers. No proprietary driver needed.
+
+---
+
+For NVIDIA GPUs (Proprietary):
+
+```rs
+pacstrap /mnt nvidia nvidia-utils nvidia-settings egl-wayland lib32-nvidia-utils
+```
+
+- `nvidia`: Proprietary NVIDIA kernel module (GPU driver)
+- `nvidia-utils`: User-space utilities and libraries (OpenGL, CUDA, Vulkan)
+- `nvidia-settings`: GUI tool for fan control, resolution, etc.
+- `egl-wayland`: Enables hardware acceleration for Wayland compositors (e.g., GNOME, Hyprland)
+- `lib32-nvidia-utils`: 32-bit compatibility libraries (required for Steam, Wine, etc.)
+
+> ⚠️ Proprietary NVIDIA drivers offer high performance, but may require extra setup later — especially for **Wayland** and **hybrid GPUs** (laptops with Intel+NVIDIA). The next guide will cover this in detail.
+
+---
+
+For Intel Integrated Graphics:
+
+```rs
+pacstrap /mnt mesa xf86-video-intel vulkan-intel lib32-mesa lib32-vulkan-intel
+```
+
+- `mesa`: Core graphics library (OpenGL, GLES)
+- `xf86-video-intel`: X11 driver (optional; some users prefer to omit it)
+- `vulkan-intel`: Vulkan driver for Intel GPUs
+- `lib32-*`: 32-bit support (useful for compatibility with games or Wine)
+
+> ✅ Intel graphics are **very Linux-friendly**, especially on modern chips. Wayland works great out of the box.
+
+---
+
+### Filesystem Table (fstab)
 
 [fstab](https://wiki.archlinux.org/title/Fstab) *(Filesystem Table)* located in `/etc/fstab` is a config file that tells Linux which partitions, subvolumes, or drives to mount automatically at boot, where to mount them, and with what options. Each line in the file represents a storage device and its mount configuration. The `genfstab` command scans your currently mounted filesystems (like `/mnt`, `/mnt/home`, etc.) and generates the appropriate entries for fstab, using stable identifiers like *UUIDs* so mounts stay consistent even if device names change.
 
@@ -521,7 +645,7 @@ echo '/swap/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
 
 > Note: The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/nvmeXnX`.
 
-### Change Root into Your New System
+### Change Root
 
 In Linux, the ***"Root Environment"*** refers to the top-level filesystems the entire OS operates in. During installation, you're working from the arch install environment *Live Arch ISO*; so the root is still in a temporary location. To configure your newly installed system as if you had booted into it, you *Change Root* or [Chroot](https://wiki.archlinux.org/title/Chroot) this root location to the place you mounted your partitions. To do this, use `arch-chroot /mnt`, which will switch the root directory (`/`) to your new system at `/mnt`. This lets you run commands like setting the *timezone*, *locale*, *bootloader* etc. inside your new Arch setup. When you reboot, you will boot to this new *"root"* location every time.
 
@@ -529,7 +653,7 @@ In Linux, the ***"Root Environment"*** refers to the top-level filesystems the e
 arch-chroot /mnt
 ```
 
-### Setup GRUB
+### GRUB Installation & Config
 
 [​GRUB](https://wiki.archlinux.org/title/GRUB), *(GNU GRand Unified Bootloader)*, is a powerful boot manager widely used in Unix-like systems. It initializes hardware components and loads the operating system kernel during the boot process, allowing users to select from multiple installed operating systems or kernel configurations. This is useful for multi-boot setups like this guide, as it enables seamless switching between OS's; For instance, Windows 11 & Arch Linux.
 
@@ -573,7 +697,7 @@ Adding boot menu entry for UEFI Firmware Settings ...
 done
 ```
 
-## Last Configuration Before Reboot
+## Essential Configurations Before Reboot
 
 These last configurations set essential **System Settings** required for your Arch Linux system to function properly after rebooting. They ensure the correct system *timezone*, *locale* (language settings), *network connectivity*, *hostname*, and *user security* settings are configured.
 
@@ -750,6 +874,7 @@ umount -Rlf /mnt
 ```
 
 Reboot the system, you will be greeted with the GRUB menu. If you did everything right, windows 11 and arch linux will appear in the boot options. 
+> Note: While the computer is rebooting, unplug the installation media USB
 
 ```rs
 reboot
@@ -761,4 +886,4 @@ reboot
 
 **Congratulations!!! You have finally booted into Arch Linux!!** 🎆
 
-We are now ready to move on to the [Post-Installation](post_installation.md) of Arch Linux alongside Windows. 
+So after the reboot your back in Arch Linux and just see a black TTY with a login prompt and no internet connection? Yeah, that's because Arch Linux really does give you the freedom to set ***Everything*** up from scratch just the way you want it. In the [Post-Installation](post_installation.md), we will make it look like an actual operating system.

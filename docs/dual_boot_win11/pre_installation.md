@@ -62,9 +62,13 @@ In this guide, we'll be working mostly from within Windows 11 to prepare for boo
 
 1. Press `Win + R`, then type `powercfg.cpl` to enter Windows Power Options.
 
-2. Go to *Choose what the power buttons do* -> *Change settings that are currently unavailable* ![Choose What Power Buttons Do](../../assets/choose_power_buttons_do.png)
+2. Go to `Choose what the power buttons do` -> `Change settings that are currently unavailable`
+   
+   ![Choose What Power Buttons Do](../../assets/choose_power_buttons_do.png)
 
-3. Disable the *Turn on fast startup* option. ![Disable Fast Startup](../../assets/disable_fast_startup.png)
+3. Turn off the `Turn on fast startup` option. 
+   
+   ![Disable Fast Startup](../../assets/disable_fast_startup.png)
 
 ---
 
@@ -74,9 +78,13 @@ Windows is currently using 100% of your drive, so we need to make room for our L
 
 1. Press `Win + R`, then type `diskmgmt.msc` to enter Windows Disk Manager.
 
-2. Pick the `Partition` you would like to free up space in, typically a drive that you have plenty of space in. This could be the `C:\` or `G:\` Drive in this example: 
+2. Pick the `Partition` you would like to free up space in, typically a partition that you have plenty of space in. This could be either the `C:\` or `G:\` partition in the image example: 
+
+   **ONLY PICK ONE!**
    
-   ![Disk Manager](../../assets/disk_manager.png) Note that you may see *Recovery Partitions* or other small system partitions - **avoid** resizing or deleting those. You only need to shrink the main Windows partition of choice. 
+   ![Disk Manager](../../assets/disk_manager.png) 
+
+   > ⚠️ You may see *Recovery Partitions* or other small system partitions - **avoid** resizing or deleting those. You only need to shrink the main Windows partition of choice. 
 
 3. Right click your chosen Partition and choose `Shrink Volume`. Now, free up however much space you think you will use in your arch linux installation. In this case, I will shrink **500GiB + 500MiB** of space - *This should be enough if you're new to linux.* The extra 500MiB is for the *EFI System Partition* as mentioned before. To calculate the MiB number equivalent to 500GiB + our 500MiB EFI partition, calculate *1024* * *500* + *500* = *512,500*.
    
@@ -86,7 +94,7 @@ Windows is currently using 100% of your drive, so we need to make room for our L
 
    ![Free Space Result](../../assets/unallocated_space_result.png)
 
-   After the partition is shrunk, **LEAVE IT AS IS**, Arch Linux needs the space unformatted. 
+   After the partition is shrunk, **LEAVE IT AS IS**, Arch Linux will deal with the formatting on its own. 
 ---
 
 ## Download Arch Linux
@@ -97,7 +105,9 @@ The *ISO file* we will download for this is like a digital version of the Arch L
 
 2. You'll see a popup in Windows telling you a new drive was detected. Go to *File Explorer* -> *USB Drive*. Create a new folder in your USB Drive called `ISO`. 
 
-3. Go to the official Arch Linux Website [Download Page](https://archlinux.org/download/). Scroll down until you see your country or a country closest to you. Click a reputable domain such as **.edu**. For example, if you're in the US, *arizona.edu* would be good option. You'll see something like this: ![Arch Linux ISO](../../assets/arch_linux_iso.png)
+3. Go to the official Arch Linux Website [Download Page](https://archlinux.org/download/). Scroll down until you see your country or a country closest to you. Click a reputable domain such as **.edu**. For example, if you're in the US, *arizona.edu* would be good option. You'll see something like this: 
+   
+   ![Arch Linux ISO](../../assets/arch_linux_iso.png)
    
 4. Download the top file to the `ISO` directory. It'll look something like: *archlinux-version-x86_64.iso* just like in the image.
 
@@ -113,7 +123,9 @@ Ventoy is a cross-platform tool that turns your USB drive into a **bootable** dr
 
 2. Extract the downloaded zip file and run the `Ventoy2Disk.exe` executable.
 
-3. You'll see something like this: ![Ventoy](../../assets/ventoy_install.png)
+3. You'll see something like this: 
+   
+   ![Ventoy](../../assets/ventoy_install.png)
 
 4. Under the *Device* dropdown menu, select your USB Drive, and then press *Install*.
 
@@ -127,9 +139,13 @@ Ventoy is a cross-platform tool that turns your USB drive into a **bootable** dr
 
 1. To boot into the *UEFI/BIOS Settings*, restart your computer. While its rebooting, relentlessly spam one of the [UEFI/BIOS Setup Keys](#how-to-access-uefibios-settings-and-boot-menu) your manufacturer uses. Make sure you use the **UEFI/BIOS** keys in the chart, not the *Boot Menu* keys.
 
-2. Every UEFI menu will be different, but it will look something like this: ![UEFI Menu](../../assets/uefi_menu.png) Search for anything that says `Security` and move to that tab via the `Arrow Keys`, `Tab`, and `Esc` or just with your Mouse.
+2. Every UEFI menu will be different, but it will look something like this: 
+   
+   ![UEFI Menu](../../assets/uefi_menu.png) Search for anything that says `Security` and move to that tab via the `Arrow Keys`, `Tab`, and `Esc` or just with your Mouse.
 
-3. Once Your in the `Security` section, look for `Secure Boot` and disable it. It might be in its own section, but you should be able to find it. ![Secure Boot](../../assets/secure_boot.png)
+3. Once Your in the `Security` section, look for `Secure Boot` and disable it. It might be in its own section, but you should be able to find it. 
+   
+   ![Secure Boot](../../assets/secure_boot.png)
 
 4. Save the changes and exit the `UEFI/BIOS` and you will boot back into Windows. 
 
@@ -141,12 +157,18 @@ Now that you’ve downloaded the ISO and set up Ventoy, it’s time to **boot** 
 
 1. Reboot your computer and enter the *Boot Menu*. If you don't know how to do this, relentlessly spam one of the [Boot Menu Keys](#how-to-access-uefibios-settings-and-boot-menu) your manufacturer uses. Make sure you use the **Boot Menu** keys in the chart, not the *UEFI/BIOS* keys.
 
-2. Once in Select your USB Drive. This will take you to the **Ventoy EFI Tool** which allows us to pick the ISO we want to boot into. Next choose **Boot in normal mode**. You will now see the *archlinux-version-x86_64.iso* option to boot into the Arch Linux installation environment.        ![Ventoy Boot Menu](../../assets/ventoy_boot.png). 
+2. Once in Select your USB Drive. This will take you to the **Ventoy EFI Tool** which allows us to pick the ISO we want to boot into. Next choose **Boot in normal mode**. You will now see the *archlinux-version-x86_64.iso* option to boot into the Arch Linux installation environment. 
+   
+   ![Ventoy Boot Menu](../../assets/ventoy_boot.png)
 
-3. Choose `Arch Linux install medium (x86_64, UEFI)`: ![Arch Linux Install Medium](../../assets/arch_install_medium.jpg)
+3. Choose `Arch Linux install medium (x86_64, UEFI)`: 
+   
+   ![Arch Linux Install Medium](../../assets/arch_install_medium.jpg)
 
 ## Finally Done 🎉
 
-**Congratulations!!! You have finally booted into Arch Linux!!** 🎆 ![Arch Linux TTY](../../assets/arch_linux_tty.jpg)
+**Congratulations!!! You have finally booted into Arch Linux!!** 🎆 
+   
+![Arch Linux TTY](../../assets/arch_linux_tty.jpg)
 
-We are now ready to move on to the [Installation](installation.md) of Arch Linux alongside Windows. 
+We are now ready to move on to the [Installation](installation.md) of Arch Linux itself! 
