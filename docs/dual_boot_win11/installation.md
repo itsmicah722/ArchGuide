@@ -473,7 +473,7 @@ mount /dev/nvmeXnXpX /mnt/efi
 [Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *microcode*, *bootloaders*, *development utilities*, etc. This forms the minimal working Arch system you'll boot into.
 
 ```rs
-pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efibootmgr grub-btrfs inotify-tools timeshift nvim networkmanager pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector zsh zsh-completions zsh-autosuggestions openssh man sudo
+pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efibootmgr grub-btrfs os-prober inotify-tools timeshift nvim nano networkmanager pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector zsh zsh-completions zsh-autosuggestions openssh man sudo
 ```
 
 ### 📦 General Arch Linux Packages
@@ -508,14 +508,17 @@ pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efi
 - **grub-btrfs**  
   A script that integrates Btrfs snapshots with GRUB so you can boot into Timeshift snapshots directly from the GRUB menu.
 
+- **os-prober**  
+  Detects other installed operating systems (like Windows) during GRUB installation. Essential for dual-boot setups.
+
 - **inotify-tools**  
   Provides command-line programs to monitor filesystem events. Used by grub-btrfs to watch for snapshot changes.
 
 - **timeshift**  
   A system restore utility using Btrfs or rsync. Great for taking system snapshots before upgrades or risky changes.
 
-- **nvim**  
-  Neovim – a modern, lightweight, and extensible fork of Vim. Powerful for editing config files or code.
+- **Text Editors**  
+  Nano & Neovim – Light weight text editors for editing config files or code. Pick your poison.
 
 - **networkmanager**  
   Manages network connections automatically. Great for desktops/laptops—works with both Wi-Fi and Ethernet.
@@ -553,9 +556,6 @@ pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efi
 - **man**  
   The manual page system. `man <command>` gives you documentation for commands and tools on your system.
 
-- **os-prober**  
-  Detects other installed operating systems (like Windows) during GRUB installation. Essential for dual-boot setups.
-
 
 ### Microcode Firmware
 
@@ -581,7 +581,7 @@ pacstrap /mnt amd-ucode
 
 ### Video Drivers
 
-Your **GPU (Graphics Processing Unit)** needs dedicated drivers for 2D/3D acceleration, Vulkan support, and hardware video decoding. Arch Linux provides vendor-supported drivers for **AMD**, **NVIDIA**, and **Intel** graphics chips — you can install them **during pacstrap** or after rebooting into your new system.
+Your **GPU (Graphics Processing Unit)** needs dedicated drivers for 2D/3D acceleration, Vulkan support, and hardware video decoding. Arch Linux provides vendor-supported drivers for [AMD GPU](https://wiki.archlinux.org/title/AMDGPU), [NVIDIA](https://wiki.archlinux.org/title/NVIDIA), and [Intel Graphics](https://wiki.archlinux.org/title/Intel_graphics). We install these video drivers with pacstrap so we don't have to later.
 
 For AMD GPUs:
 
@@ -601,14 +601,13 @@ pacstrap /mnt mesa mesa-vdpau vulkan-radeon libva-mesa-driver
 For NVIDIA GPUs (Proprietary):
 
 ```rs
-pacstrap /mnt nvidia nvidia-utils nvidia-settings egl-wayland lib32-nvidia-utils
+pacstrap /mnt nvidia nvidia-utils nvidia-settings egl-wayland
 ```
 
 - `nvidia`: Proprietary NVIDIA kernel module (GPU driver)
 - `nvidia-utils`: User-space utilities and libraries (OpenGL, CUDA, Vulkan)
 - `nvidia-settings`: GUI tool for fan control, resolution, etc.
 - `egl-wayland`: Enables hardware acceleration for Wayland compositors (e.g., GNOME, Hyprland)
-- `lib32-nvidia-utils`: 32-bit compatibility libraries (required for Steam, Wine, etc.)
 
 > ⚠️ Proprietary NVIDIA drivers offer high performance, but may require extra setup later — especially for **Wayland** and **hybrid GPUs** (laptops with Intel+NVIDIA). The next guide will cover this in detail.
 
