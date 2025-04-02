@@ -309,12 +309,6 @@ The [Temporaries](https://en.wikipedia.org/wiki/Temporary_folder) `/tmp` directo
 btrfs subvolume create /mnt/@tmp
 ```
 
-The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/.snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
-
-```rs
-btrfs subvolume create /mnt/@snapshots
-```
-
 The [Swap](https://en.wikipedia.org/wiki/Memory_paging) `/swap` directory is used for storing the swapfile, isolated to avoid copy-on-write issues. The subvolume name is `@swap`:
 
 ```rs
@@ -346,7 +340,7 @@ mount -o subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/
 Create the *Mount Points* (directories) for each subvolume so we can mount them there:
 
 ```rs
-mkdir -p /mnt/{home,tmp,.snapshots,swap,efi}
+mkdir -p /mnt/{home,tmp,swap,efi}
 ```
 
 Mount home subvolume ***"@home"*** to `mnt/home` for user data like documents and config files in: 
@@ -355,13 +349,19 @@ Mount home subvolume ***"@home"*** to `mnt/home` for user data like documents an
 mount -o subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/home
 ```
 
+Mount temporaries subvolume ***"@tmp"*** to `/mnt/tmp` for unimportant temporary files; it’s reset often:
+
+```rs
+mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
+```
+
 Create subdirectories inside `mnt/var` for log files and cached data:
 
 ```rs
 mkdir -p /mnt/var/{log,cache}
 ```
 
-Mount log subvolume ***"@log"*** to `/mnt/var/log` for system logs separately, making them easier to manage or exclude from snapshots:
+Mount log subvolume ***"@log"*** to `/mnt/var/log` for system logs and debugging:
 
 ```rs
 mount -o subvol=@log,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/log
@@ -371,18 +371,6 @@ Mounts cache subvolume ***"@cache"*** to `/mnt/var/cache`, used by pacman and ot
 
 ```rs
 mount -o subvol=@cache,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var/cache
-```
-
-Mount temporaries subvolume ***"@tmp"*** to `/mnt/tmp` for temporary files; it’s reset often and doesn’t need to be backed up:
-
-```rs
-mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
-```
-
-Mount snapshots subvolume ***"@snapshots"*** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
-
-```rs
-mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
 ```
 
 ### Setup SWAP (Optional)
@@ -771,7 +759,7 @@ passwd <USERNAME>
 
 ### Enable `sudo` for Regular User
 
-The [Sudo](https://wiki.archlinux.org/title/Sudo) package allows the regular user to perform administrative tasks securely when given permission.
+The [Sudo](https://wiki.archlinux.org/title/Sudo) tool allows the regular user to perform administrative tasks securely when given permission.
 
 To set a user as `sudo`:
 
@@ -812,9 +800,6 @@ UUID=550e8400-e29b-41d4-a716-446655440000       /var/cache    btrfs    subvol=@c
 # Temporary files subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /tmp          btrfs    subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
 
-# Snapshots subvolume
-UUID=550e8400-e29b-41d4-a716-446655440000       /.snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
-
 # Swap subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /swap         btrfs    subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2                                         0       0
 
@@ -825,7 +810,7 @@ UUID=123e4567-e89b-12d3-a456-426614174000       /efi          vfat     umask=007
 - **UUIDs:** The UUIDs will be different for you, this is normal. 
 - **Swap:** The swap subvolume may or may not exist for you, depending on if you chose to create one or not.
 
-**EVERYTHING ELSE IN THIS EXAMPLE OUTPUT SHOULD BE THE SAME FOR YOU, IF NOT YOU HAVE A PROBLEM!**
+***EVERYTHING ELSE IN THIS EXAMPLE OUTPUT SHOULD BE THE SAME FOR YOU, OTHERWISE YOU HAVE A PROBLEM***
 
 ### Reboot Commands
 
@@ -858,12 +843,6 @@ reboot
 
 Btrfs [Snapshots](https://wiki.archlinux.org/title/Btrfs#Snapshots) are like lightweight *Restore Points* that capture the current state of a subvolume. Snapshots do this without hard copying data from the subvolume, which takes up very little space on disk; done via [Copy-On-Write](https://en.wikipedia.org/wiki/Copy-on-write) *(COW)* feature. We will setup Btrfs snapshots to work directly with GRUB so we can boot into them without needing the *Arch Linux ISO Environment*.
 
-Setup the snapshot directory location. This is where our snapshotted Btrfs Subvolumes will live:
-
-```rs
-sudo mkdir -p /.snapshots/base-arch-install
-```
-
 Start the `grub-btrfsd` daemon to update GRUB when snapshots are created or deleted:
 
 ```rs
@@ -885,7 +864,7 @@ sudo systemctl edit --full grub-btrfsd
 Go to the line that contains: 
 
 ```rs
-ExecStart=/usr/bin/grub-btrfsd /.snapshots --syslog
+ExecStart=/usr/bin/grub-btrfsd --syslog
 ```
 
 Edit that line to look like this: 
@@ -931,10 +910,10 @@ Here, we will create a snapshot of the root subvolume (`@`). Root stores the exa
 > **Note:** We do not snapshot the other subvolumes, because we do not want to roll-back our personal files, system logs, etc to a previous point; because that would lose our data. 
 
 ```rs
-sudo btrfs subvolume snapshot / /.snapshots/base-arch-install/@
+sudo timeshift --create --comments "archlinux-base-install"
 ```
 
-After creating a snapshot, update the GRUB config:
+After creating a snapshot, update the GRUB config and ensure it detects the snapshot. 
 
 ```rs
 sudo grub-mkconfig -o /boot/grub/grub.cfg
