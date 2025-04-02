@@ -31,7 +31,7 @@ ping -c 3 cloudflare.com
 ### Connect to Wi-Fi
 
 Launch the built-in [iwctl](https://wiki.archlinux.org/title/Iwd) tool to connect to a wireless network:
-> Type `exit` at any point if you want to abort the tool.
+> **Note:** Type `exit` at any point if you want to abort the tool.
 
 ```rs
 iwctl
@@ -56,7 +56,7 @@ station <STATION_NAME> get-networks
 ```
 
 Connect to the SSID *(Wi-Fi Name)* of your network:
-> 🔐 You will be prompted to enter the *Wi-Fi Password*.
+> **Note:** You will be prompted to enter the *Wi-Fi Password*.
 
 ```rs
 station <STATION_NAME> connect <SSID>
@@ -95,7 +95,7 @@ The guide will walk you through every step. In this case we will be dealing with
 ### Get Partition Layout
 
 ​A *Hard Disk Drive* [(HDD)](https://en.wikipedia.org/wiki/Hard_disk_drive) is the device inside your computer which stores all your data; including the system files, applications, and personal data. All computers have them and each one contains a unique *Disk Layout*. The disk layout includes different [Partitions](https://simple.wikipedia.org/wiki/Disk_partition), which are sections of the HDD treated as a separate unit of the OS. On the other hand, [Volumes](https://en.wikipedia.org/wiki/Volume_(computing)) are storage areas for a single filesystem, typically stored within the partitions. The terms *Volume* and *Partition* are often used interchangeably but [Are Not](https://blog.purestorage.com/purely-educational/partition-vs-volume-whats-the-difference/) exactly the same. 
-> Note: For the sake of this guide, the terms "Drive", "Hard Disk/HDD", "NVME SSD", and "SATA HDD", all mean the same thing. All of them are simply physical data storage devices you could hold in your hand located in the PC.
+> **Note:** For the sake of this guide, the terms "Drive", "Hard Disk/HDD", "NVME SSD", and "SATA HDD", all mean the same thing. All of them are simply physical data storage devices you could hold in your hand located in the PC.
 
 To get your current *Disk Layout*, you'll need to run the `lsblk` command:
 
@@ -177,7 +177,7 @@ Each filesystem serves a unique purpose in the OS. We'll cover them more in dept
 [UEFI](https://en.wikipedia.org/wiki/UEFI) *(Unified Extensible Firmware Interface)* and [BIOS](https://en.wikipedia.org/wiki/BIOS) *(Basic Input/Output System)* are two primary types of firmware interfaces that your computer uses to initialize hardware and boot into your operating system. BIOS is an older, legacy standard typically found in earlier hardware. UEFI is the modern replacement, commonly used in newer hardware. Each firmware interface corresponds to a specific partitioning scheme; BIOS systems usually work with the older MBR *(Master Boot Record)* format, while UEFI systems utilize the modern GPT *(GUID Partition Table)* format.
 
 Since you are using dual-booting Arch Linux with Windows 11, we will use the modern [gdisk](https://wiki.archlinux.org/title/GPT_fdisk) *(GPT fdisk)* tool instead of the legacy *fdisk*. Launch the `gdisk` tool:
-> Type `q` if you ever want to abort the tool without applying changes.
+> **Note:** Type `q` if you ever want to abort the tool without applying changes.
 
 ```rs
 gdisk /dev/nvmeXnX
@@ -291,12 +291,6 @@ The [Home](https://en.wikipedia.org/wiki/Home_directory#Unix) `/home` directory 
 btrfs subvolume create /mnt/@home
 ```
 
-The [Variable](https://www.linfo.org/var.html) `/var` directory contains variable data like system logs, caches, databases, and package information. The subvolume name is `@var`:
-
-```rs
-btrfs subvolume create /mnt/@var
-```
-
 The [Logs](https://www.loggly.com/ultimate-guide/linux-logging-basics/) `var/logs` directory is used to isolate system debug output from other parts of */var*. The subvolume name is `@log`:
 
 ```rs
@@ -315,7 +309,7 @@ The [Temporaries](https://en.wikipedia.org/wiki/Temporary_folder) `/tmp` directo
 btrfs subvolume create /mnt/@tmp
 ```
 
-The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/.snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
+The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
 
 ```rs
 btrfs subvolume create /mnt/@snapshots
@@ -339,7 +333,7 @@ umount -Rlf /mnt
 
 ## Mounting
 
-After creating our subvolumes, we need to [Mount](https://en.wikipedia.org/wiki/Mount_(computing)) them in the locations we want them to be in when we boot. *Mounting* means attaching a storage location (e.g., a disk, partition or subvolume) to a specific directory. This makes the mounted files and directories available to the user via the subvolume's filesystem. Each subvolume gets mounted to its own mount point (e.g. `/mnt`, `/mnt/home`, `/mnt/var`, etc.). This allows us to control how each part of the system behaves. For instance we can enable *compression*, reduce disk writes with *noatime*, or disable *copy-on-write* for swap.
+After creating our subvolumes, we need to [Mount](https://en.wikipedia.org/wiki/Mount_(computing)) them in the locations we want them to be in when we boot. *Mounting* means attaching a storage location (e.g., a disk, partition or subvolume) to a specific directory. This makes the mounted files and directories available to the user via the subvolume's filesystem. Each subvolume gets mounted to its own mount point (e.g. `/mnt`, `/mnt/home`, etc.). This allows us to control how each part of the system behaves. For instance we can enable *compression*, reduce disk writes with *noatime*, or disable *copy-on-write* for swap.
 
 ### Mount Btrfs Subvolumes
 
@@ -352,19 +346,13 @@ mount -o subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/
 Create the *Mount Points* (directories) for each subvolume so we can mount them there:
 
 ```rs
-mkdir -p /mnt/{home,var,tmp,.snapshots,swap,efi}
+mkdir -p /mnt/{home,tmp,snapshots,swap,efi}
 ```
 
 Mount home subvolume ***"@home"*** to `mnt/home` for user data like documents and config files in: 
 
 ```rs
 mount -o subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/home
-```
-
-Mount variable subvolume ***"@var"*** to `/mnt/var`, which holds package data, logs, and system state:
-
-```rs
-mount -o subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/var
 ```
 
 Create subdirectories inside `mnt/var` for log files and cached data:
@@ -391,10 +379,10 @@ Mount temporaries subvolume ***"@tmp"*** to `/mnt/tmp` for temporary files; it�
 mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
 ```
 
-Mount snapshots subvolume ***"@snapshots"*** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
+Mount snapshots subvolume ***"@snapshots"*** to `/mnt/snapshots`, where snapshot tools can store system restore points:
 
 ```rs
-mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
+mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/snapshots
 ```
 
 ### Setup SWAP (Optional)
@@ -575,7 +563,7 @@ For AMD CPUs:
 pacstrap /mnt amd-ucode
 ```
 
-> These packages will generate an additional boot initrd (like `intel-ucode.img`) that gets loaded before the Linux kernel by your bootloader (e.g., GRUB).
+> **Note:** These packages will generate an additional boot initrd (like `intel-ucode.img`) that gets loaded before the Linux kernel by your bootloader (e.g., GRUB).
 
 ---
 
@@ -594,8 +582,6 @@ pacstrap /mnt mesa mesa-vdpau vulkan-radeon libva-mesa-driver
 - `vulkan-radeon`: Vulkan driver for AMD GPUs (RADV)
 - `libva-mesa-driver`: VA-API support for video acceleration
 
-> ✅ AMD cards are **very well-supported** on Linux with open-source drivers. No proprietary driver needed.
-
 ---
 
 For NVIDIA GPUs (Proprietary):
@@ -609,8 +595,6 @@ pacstrap /mnt nvidia nvidia-utils nvidia-settings egl-wayland
 - `nvidia-settings`: GUI tool for fan control, resolution, etc.
 - `egl-wayland`: Enables hardware acceleration for Wayland compositors (e.g., GNOME, Hyprland)
 
-> ⚠️ Proprietary NVIDIA drivers offer high performance, but may require extra setup later — especially for **Wayland** and **hybrid GPUs** (laptops with Intel+NVIDIA). The next guide will cover this in detail.
-
 ---
 
 For Intel Integrated Graphics:
@@ -623,8 +607,6 @@ pacstrap /mnt mesa xf86-video-intel vulkan-intel lib32-mesa lib32-vulkan-intel
 - `xf86-video-intel`: X11 driver (optional; some users prefer to omit it)
 - `vulkan-intel`: Vulkan driver for Intel GPUs
 - `lib32-*`: 32-bit support (useful for compatibility with games or Wine)
-
-> ✅ Intel graphics are **very Linux-friendly**, especially on modern chips. Wayland works great out of the box.
 
 ---
 
@@ -642,7 +624,7 @@ Append the swap file entry:
 echo '/swap/swapfile none swap defaults 0 0' >> /mnt/etc/fstab
 ```
 
-> Note: The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/nvmeXnX`.
+> **Note:** The `-U` flag ensures it uses *UUIDs* (unique disk identifiers), which are more stable than device names like `/dev/nvmeXnX`.
 
 ### Change Root
 
@@ -723,7 +705,7 @@ hwclock --systohc
 Your [Locale](https://wiki.archlinux.org/title/Locale) is the language of the region your in and is not set by default. 
 
 Open `/etc/locale.gen` with the *nano* text editor:
-> Note: In the Arch Linux TTY your mouse or touchpad won't work, use *Arrow Keys*. Press *Ctrl + O* to save changes, and *Ctrl + X* to exit nano.
+> **Note:** Mouse & Touchpad DO NOT work in the Arch TTY! Use the *Arrow Keys* instead. Press *Ctrl + O* to save changes, and *Ctrl + X* to exit nano.
 
 ```rs
 nano /etc/locale.gen
@@ -773,8 +755,9 @@ Establishes a password for the root user, **CRITICAL** for system security and f
 
 ```rs
 passwd
-> 🔐 You will be prompted to enter your new *Root Password*.
 ```
+
+> **Note:** You will be prompted to enter your new *Root Password*.
 
 ### Create a Regular User
 
@@ -788,8 +771,9 @@ Set a password for this new user:
 
 ```rs
 passwd <USERNAME>
-> 🔐 You will be prompted to enter your new *User Password*.
 ```
+
+> **Note:** You will be prompted to enter your new *User Password*.
 
 ### Enable `sudo` for Regular User
 
@@ -825,9 +809,6 @@ UUID=550e8400-e29b-41d4-a716-446655440000       /             btrfs    subvol=@,
 # Home subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /home         btrfs    subvol=@home,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                           0       0
 
-# Variable data subvolume
-UUID=550e8400-e29b-41d4-a716-446655440000       /var          btrfs    subvol=@var,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
-
 # Log subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /var/log      btrfs    subvol=@log,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
 
@@ -838,7 +819,7 @@ UUID=550e8400-e29b-41d4-a716-446655440000       /var/cache    btrfs    subvol=@c
 UUID=550e8400-e29b-41d4-a716-446655440000       /tmp          btrfs    subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
 
 # Snapshots subvolume
-UUID=550e8400-e29b-41d4-a716-446655440000       /.snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
+UUID=550e8400-e29b-41d4-a716-446655440000       /snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
 
 # Swap subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /swap         btrfs    subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2                                         0       0
@@ -873,7 +854,7 @@ umount -Rlf /mnt
 ```
 
 Reboot the system, you will be greeted with the GRUB menu. If you did everything right, windows 11 and arch linux will appear in the boot options. 
-> Note: While the computer is rebooting, unplug the installation media USB
+> **Note:** While the computer is rebooting, unplug the installation media USB
 
 ```rs
 reboot
@@ -881,20 +862,31 @@ reboot
 
 ### Btrfs Snapshots
 
-Let's create **Btrfs Snapshots** — think of these like *restore points* for your system. These snapshots are lightweight copies of your existing subvolumes (like `/` and `/home`) that you can roll back to if something goes wrong during updates, configuration changes, or package installs. Snapshots **DO NOT** duplicate all your data — instead, they share unchanged data with the original subvolume to save space. You can later restore your system by booting into a live environment and mounting the snapshot.
+Btrfs [Snapshots](https://wiki.archlinux.org/title/Btrfs#Snapshots) are like lightweight *Restore Points* that capture the current state of a subvolume. Snapshots do this without hard copying data from the subvolume, which takes up very little space on disk; done via [Copy-On-Write](https://en.wikipedia.org/wiki/Copy-on-write) *(COW)* feature. We will setup Btrfs snapshots to work directly with GRUB so we can boot into them without needing the *Arch Linux ISO Environment*.
 
-We will backup all subvolumes to a new directory inside *@snapshots* called `base-arch-install` which will include a minimal Arch Linux OS with most core packages already installed. This snapshot essentially serves as a safety net in case something goes wrong during your post-installation setup. 
+Enable the `grub-btrfs.path` systemd unit for automatic updates to GRUB when a snapshot is created or deleted:
 
 ```rs
-sudo mkdir -p /.snapshots/base-arch-install
+sudo systemctl enable --now grub-btrfs.path
+```
 
-sudo btrfs subvolume snapshot /             /.snapshots/base-arch-install/@
-sudo btrfs subvolume snapshot /home         /.snapshots/base-arch-install/@home
-sudo btrfs subvolume snapshot /var          /.snapshots/base-arch-install/@var
-sudo btrfs subvolume snapshot /var/log      /.snapshots/base-arch-install/@log
-sudo btrfs subvolume snapshot /var/cache    /.snapshots/base-arch-install/@cache
-sudo btrfs subvolume snapshot /tmp          /.snapshots/base-arch-install/@tmp
-sudo btrfs subvolume snapshot /swap         /.snapshots/base-arch-install/@swap
+Setup the snapshot directory location. This is where our snapshotted Btrfs Subvolumes will live:
+
+```rs
+sudo mkdir -p /snapshots/base-arch-install
+```
+
+Here, we will create a snapshot of the root subvolume (`@`). Root stores the exact current state of the Arch Linux Base System (Root Directory `/`). This will backup system configs, installed packages, root files, etc. Later, if something breaks the OS such as an unstable update or misconfiguration, we simply *Roll-Back* to the snapshot.
+> **Note:** We do not snapshot the other subvolumes, because we do not want to roll-back our personal files, system logs, etc to a previous point; because that would lose our data. 
+
+```rs
+sudo btrfs subvolume snapshot / /snapshots/base-arch-install/@
+```
+
+After creating a snapshot, update the GRUB config:
+
+```rs
+sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 ---
