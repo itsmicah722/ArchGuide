@@ -879,6 +879,24 @@ Reboot the system, you will be greeted with the GRUB menu. If you did everything
 reboot
 ```
 
+### Btrfs Snapshots
+
+Let's create **Btrfs Snapshots** — think of these like *restore points* for your system. These snapshots are lightweight copies of your existing subvolumes (like `/` and `/home`) that you can roll back to if something goes wrong during updates, configuration changes, or package installs. Snapshots **DO NOT** duplicate all your data — instead, they share unchanged data with the original subvolume to save space. You can later restore your system by booting into a live environment and mounting the snapshot.
+
+We will backup all subvolumes to a new directory inside *@snapshots* called `base-arch-install` which will include a minimal Arch Linux OS with most core packages already installed. This snapshot essentially serves as a safety net in case something goes wrong during your post-installation setup. 
+
+```rs
+sudo mkdir -p /.snapshots/base-arch-install
+
+sudo btrfs subvolume snapshot /             /.snapshots/base-arch-install/@
+sudo btrfs subvolume snapshot /home         /.snapshots/base-arch-install/@home
+sudo btrfs subvolume snapshot /var          /.snapshots/base-arch-install/@var
+sudo btrfs subvolume snapshot /var/log      /.snapshots/base-arch-install/@log
+sudo btrfs subvolume snapshot /var/cache    /.snapshots/base-arch-install/@cache
+sudo btrfs subvolume snapshot /tmp          /.snapshots/base-arch-install/@tmp
+sudo btrfs subvolume snapshot /swap         /.snapshots/base-arch-install/@swap
+```
+
 ---
 
 ## Finally Done 🎉
