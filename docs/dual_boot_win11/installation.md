@@ -309,7 +309,7 @@ The [Temporaries](https://en.wikipedia.org/wiki/Temporary_folder) `/tmp` directo
 btrfs subvolume create /mnt/@tmp
 ```
 
-The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
+The [Snapshots](https://en.wikipedia.org/wiki/Snapshot_(computer_storage)) `/.snapshots` directory stores files from backups taken by tools like Snapper or Btrfs Assistant. The subvolume name is `@snapshots`:
 
 ```rs
 btrfs subvolume create /mnt/@snapshots
@@ -346,7 +346,7 @@ mount -o subvol=@,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/
 Create the *Mount Points* (directories) for each subvolume so we can mount them there:
 
 ```rs
-mkdir -p /mnt/{home,tmp,snapshots,swap,efi}
+mkdir -p /mnt/{home,tmp,.snapshots,swap,efi}
 ```
 
 Mount home subvolume ***"@home"*** to `mnt/home` for user data like documents and config files in: 
@@ -379,10 +379,10 @@ Mount temporaries subvolume ***"@tmp"*** to `/mnt/tmp` for temporary files; it�
 mount -o subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/tmp
 ```
 
-Mount snapshots subvolume ***"@snapshots"*** to `/mnt/snapshots`, where snapshot tools can store system restore points:
+Mount snapshots subvolume ***"@snapshots"*** to `/mnt/.snapshots`, where snapshot tools can store system restore points:
 
 ```rs
-mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/snapshots
+mount -o subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2 /dev/nvmeXnXpX /mnt/.snapshots
 ```
 
 ### Setup SWAP (Optional)
@@ -461,8 +461,12 @@ mount /dev/nvmeXnXpX /mnt/efi
 [Pacstrap](https://wiki.archlinux.org/title/Pacstrap) is a tool used in the Arch Linux Install Environment to copy essential packages onto your new system (usually at `/mnt`). It installs the base system, which includes core utilities, and other packages you specify such as *firmware*, *microcode*, *bootloaders*, *development utilities*, etc. This forms the minimal working Arch system you'll boot into.
 
 ```rs
-pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efibootmgr grub-btrfs os-prober inotify-tools timeshift nvim nano networkmanager pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber reflector zsh zsh-completions zsh-autosuggestions openssh man sudo
+pacstrap /mnt base linux linux-firmware efibootmgr os-prober grub btrfs-progs grub-btrfs timeshift base-devel 
+git openssh man sudo nano networkmanager pipewire pipewire-alsa pipewire-pulse pipewire-jack wireplumber 
+reflector inotify-tools
 ```
+
+> **Note:** I prefer [nvim](https://wiki.archlinux.org/title/Neovim) (*NeoVim*) over Nano for text editing, but this guide will use Nano since its more beginner-friendly for Windows users. 
 
 ### 📦 General Arch Linux Packages
 
@@ -475,38 +479,35 @@ pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efi
 - **linux-firmware**  
   Contains firmware for various devices (CPUs, GPUs, Wi-Fi, Bluetooth, etc.). Necessary for full hardware support.
 
-- **base-devel**  
-  A group of development tools like `gcc`, `make`, `pkgconf`, and others. Required for compiling software and using the **AUR** *(Arch User Repository)*.
-
-- **git**  
-  A version control system. Essential for downloading dotfiles, cloning repos, and interacting with the AUR.
-
-- **sudo**  
-  Allows regular users to run commands as root by prefixing them with `sudo`. Important for secure system administration.
-
-- **btrfs-progs**  
-  Tools for managing Btrfs filesystems. Includes utilities like `mkfs.btrfs`, `btrfs balance`, and snapshotting tools.
-
-- **grub**  
-  The GRUB bootloader lets you choose between multiple operating systems or kernels at boot.
-
 - **efibootmgr**  
   A tool to manage UEFI boot entries. Needed when installing GRUB on systems using UEFI.
-
-- **grub-btrfs**  
-  A script that integrates Btrfs snapshots with GRUB so you can boot into Timeshift snapshots directly from the GRUB menu.
 
 - **os-prober**  
   Detects other installed operating systems (like Windows) during GRUB installation. Essential for dual-boot setups.
 
-- **inotify-tools**  
-  Provides command-line programs to monitor filesystem events. Used by grub-btrfs to watch for snapshot changes.
+- **grub**  
+  The GRUB bootloader lets you choose between multiple operating systems or kernels at boot.
+
+- **btrfs-progs**  
+  Tools for managing Btrfs filesystems. Includes utilities like `mkfs.btrfs`, `btrfs balance`, and snapshotting tools.
+
+- **grub-btrfs**  
+  A script that integrates Btrfs snapshots with GRUB so you can boot into Timeshift snapshots directly from the GRUB menu.
 
 - **timeshift**  
   A system restore utility using Btrfs or rsync. Great for taking system snapshots before upgrades or risky changes.
 
-- **Text Editors**  
-  Nano & Neovim – Light weight text editors for editing config files or code. Pick your poison.
+- **git**  
+  A version control system. Essential for downloading dotfiles, cloning repos, and interacting with the AUR.
+
+- **openssh**  
+  Provides the `ssh` command and SSH server/client tools. Useful for remote access, Git over SSH, etc.
+
+- **man**  
+  The manual page system. `man <command>` gives you documentation for commands and tools on your system.
+
+- **sudo**  
+  Allows regular users to run commands as root by prefixing them with `sudo`. Important for secure system administration.
 
 - **networkmanager**  
   Manages network connections automatically. Great for desktops/laptops—works with both Wi-Fi and Ethernet.
@@ -528,22 +529,6 @@ pacstrap /mnt base linux linux-firmware base-devel git sudo btrfs-progs grub efi
 
 - **reflector**  
   Automatically fetches the latest and fastest Arch mirror list based on location and speed. Useful for speeding up package downloads.
-
-- **zsh**  
-  Z Shell – an interactive and customizable shell. A popular alternative to Bash with advanced scripting and usability features.
-
-- **zsh-completions**  
-  Additional completion definitions for Zsh. Improves the shell experience by auto-completing commands more effectively.
-
-- **zsh-autosuggestions**  
-  Suggests commands as you type based on history and context. Super helpful and improves shell efficiency.
-
-- **openssh**  
-  Provides the `ssh` command and SSH server/client tools. Useful for remote access, Git over SSH, etc.
-
-- **man**  
-  The manual page system. `man <command>` gives you documentation for commands and tools on your system.
-
 
 ### Microcode Firmware
 
@@ -647,14 +632,21 @@ grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=GRUB
 [os-prober](https://wiki.archlinux.org/title/GRUB#Detecting_other_operating_systems) is a utility that detects other operating systems installed on your machine by scanning disk partitions. When integrated with GRUB, it allows the bootloader to include these detected systems in its boot menu, for selection at startup. In some distributions, os-prober is disabled by default. To enable it, you may need to set `GRUB_DISABLE_OS_PROBER=false` in your GRUB configuration. To enable it: 
 
 ```rs
-sed -i '/^GRUB_DISABLE_OS_PROBER=/d' /etc/default/grub
+sed -i '/^GRUB_DISABLE_OS_PROBER=/d' /etc/default/grub && 
 echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
 ```
 
-Temporarily mount the Windows ESP so os-prober can find it:
+Create a temporary directory for the Windows ESP:
 
 ```rs
 mkdir -p /mnt/windows_esp
+```
+
+Temporarily mount the Windows ESP so `os-prober` can detect it:
+
+***MAKE SURE YOU MOUNT THE (WINDOWS) EFI PARTITION, NOT THE ONE WE CREATED IN THIS GUIDE***
+
+```rs
 mount /dev/nvmeXnXpX /mnt/windows_esp
 ```
 
@@ -677,6 +669,8 @@ Found Windows Boot Manager on /dev/nvme0n1p1@/EFI/Microsoft/Boot/bootmgfw.efi
 Adding boot menu entry for UEFI Firmware Settings ...
 done
 ```
+
+> **Note:** The Windows Boot Manager needs to be found so we can boot into Windows 11 with GRUB. If it is not detected, dual boot will not work. Make sure you followed previous steps!
 
 ## Essential Configurations Before Reboot
 
@@ -819,7 +813,7 @@ UUID=550e8400-e29b-41d4-a716-446655440000       /var/cache    btrfs    subvol=@c
 UUID=550e8400-e29b-41d4-a716-446655440000       /tmp          btrfs    subvol=@tmp,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                            0       0
 
 # Snapshots subvolume
-UUID=550e8400-e29b-41d4-a716-446655440000       /snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
+UUID=550e8400-e29b-41d4-a716-446655440000       /.snapshots   btrfs    subvol=@snapshots,compress=zstd:3,noatime,ssd,discard=async,space_cache=v2                      0       0
 
 # Swap subvolume
 UUID=550e8400-e29b-41d4-a716-446655440000       /swap         btrfs    subvol=@swap,nodatacow,ssd,discard=async,space_cache=v2                                         0       0
@@ -864,23 +858,80 @@ reboot
 
 Btrfs [Snapshots](https://wiki.archlinux.org/title/Btrfs#Snapshots) are like lightweight *Restore Points* that capture the current state of a subvolume. Snapshots do this without hard copying data from the subvolume, which takes up very little space on disk; done via [Copy-On-Write](https://en.wikipedia.org/wiki/Copy-on-write) *(COW)* feature. We will setup Btrfs snapshots to work directly with GRUB so we can boot into them without needing the *Arch Linux ISO Environment*.
 
-Enable the `grub-btrfs.path` systemd unit for automatic updates to GRUB when a snapshot is created or deleted:
-
-```rs
-sudo systemctl enable --now grub-btrfs.path
-```
-
 Setup the snapshot directory location. This is where our snapshotted Btrfs Subvolumes will live:
 
 ```rs
-sudo mkdir -p /snapshots/base-arch-install
+sudo mkdir -p /.snapshots/base-arch-install
+```
+
+Start the `grub-btrfsd` daemon to update GRUB when snapshots are created or deleted:
+
+```rs
+sudo systemctl start grub-btrfsd
+```
+
+Activate grub-btrfsd on system startup: 
+
+```rs
+sudo systemctl enable grub-btrfsd
+```
+
+Make grub-btrfs work with `timeshift` correctly:
+
+```rs
+sudo systemctl edit --full grub-btrfsd
+```
+
+Go to the line that contains: 
+
+```rs
+ExecStart=/usr/bin/grub-btrfsd /.snapshots --syslog
+```
+
+Edit that line to look like this: 
+
+```rs
+ExecStart=/usr/bin/grub-btrfsd --syslog --timeshift-auto
+```
+
+The modified file should look like this:
+
+```rs
+[Unit]
+Description=Regenerate grub-btrfs.cfg
+
+[Service]
+Type=simple
+LogLevelMax=notice
+# Set the possible paths for `grub-mkconfig`
+Environment="PATH=/sbin:/bin:/usr/sbin:/usr/bin"
+# Load environment variables from the configuration
+EnvironmentFile=/etc/default/grub-btrfs/config
+# Start the daemon, usage of it is:
+# grub-btrfsd [-h, --help] [-t, --timeshift-auto] [-l, --log-file LOG_FILE] SNAPSHOTS_DIRS
+# SNAPSHOTS_DIRS         Snapshot directories to watch, without effect when --timeshift-auto
+# Optional arguments:
+# -t, --timeshift-auto  Automatically detect Timeshifts snapshot directory
+# -l, --log-file        Specify a logfile to write to
+# -v, --verbose         Let the log of the daemon be more verbose
+# -s, --syslog          Write to syslog
+ExecStart=/usr/bin/grub-btrfsd --syslog --timeshift-auto
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Restart the grub-btrfsd daemon: 
+
+```rs
+sudo systemctl restart grub-btrfsd 
 ```
 
 Here, we will create a snapshot of the root subvolume (`@`). Root stores the exact current state of the Arch Linux Base System (Root Directory `/`). This will backup system configs, installed packages, root files, etc. Later, if something breaks the OS such as an unstable update or misconfiguration, we simply *Roll-Back* to the snapshot.
 > **Note:** We do not snapshot the other subvolumes, because we do not want to roll-back our personal files, system logs, etc to a previous point; because that would lose our data. 
 
 ```rs
-sudo btrfs subvolume snapshot / /snapshots/base-arch-install/@
+sudo btrfs subvolume snapshot / /.snapshots/base-arch-install/@
 ```
 
 After creating a snapshot, update the GRUB config:
